@@ -5,4 +5,6 @@
 
 sf::RenderWindow * WINDOW;
 
+/* hello world! */
+
 #endif // GLOBAL_HPP
