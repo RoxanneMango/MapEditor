@@ -11,12 +11,23 @@ public:
 		setFillColor(sf::Color::Red);
 	}
 	
-	bool isPressed = false;
+	bool isClicked = false;
 	
 	void update(sf::Vector2f pos)
 	{
 		setPosition(pos);
 	}
+	
+	bool isPressed()
+	{
+		if(isClicked)
+		{
+			isClicked = false;
+			return true;
+		}
+		return false;
+	}
+	
 	void render(sf::RenderWindow & window)
 	{
 		window.draw(*this);

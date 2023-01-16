@@ -35,7 +35,7 @@ public:
 		setPosition(pos);
 
 		setFillColor(sf::Color::Green);
-		setOutlineThickness(2);
+		setOutlineThickness(0.5);
 		setOutlineColor(sf::Color::Black);
 
 		sf::Texture * texture = new sf::Texture();
@@ -50,7 +50,6 @@ public:
 		{
 			for(unsigned int x = 0; x < texturePackTileNum.x; x++)
 			{
-
 				sf::Vector2f texturePos( x*tile_size, y*tile_size );
 
 				Tile tile(sf::Vector2f(tile_size, tile_size), sf::Vector2f(pos.x + texturePos.x + margin*x, pos.y + texturePos.y + margin*y));
@@ -68,7 +67,6 @@ public:
 		title.setStyle(sf::Text::Bold);
 		title.setFillColor(sf::Color::White);
 		
-		
 		setSize(sf::Vector2f(size.x, texturePackTileNum.y*tile_size + (margin*texturePackTileNum.y-1)));
 		
 	}
@@ -81,11 +79,10 @@ public:
 			{
 				if(tile.isVisible)
 				{
-					bool isPressed = CURSOR->isPressed;
 					if(Collision::AABB(*CURSOR, tile) || ((tile.index == Tile::selectedIndex) && (tile.ID == Tile::selectedID)) )
 					{
 						tile.hoverBox.setFillColor(sf::Color(tile.hoverColor.r, tile.hoverColor.g, tile.hoverColor.b, tile.transparency));						
-						if(isPressed)
+						if((tile.index != Tile::selectedIndex) && CURSOR->isPressed())
 						{
 							Tile::selectedIndex = tile.index;
 							Tile::selectedID = tile.ID;
@@ -99,7 +96,6 @@ public:
 					if((tile.index == Tile::selectedIndex) && (tile.ID == Tile::selectedID))
 					{
 						tile.hoverBox.setFillColor(sf::Color(tile.hoverColor.r, tile.hoverColor.g, tile.hoverColor.b, tile.transparency));
-						tile.setOutlineColor(sf::Color::Red);
 					}
 					else
 					{
@@ -216,7 +212,7 @@ public:
 		setOutlineColor(sf::Color::Black);		
 		
 		textureSize = sf::Vector2f(size.x - margin.x, size.x - margin.y);
-		addTexturePreview("../assets/texturepack.png");		
+		addTexturePreview("../assets/texturepack.png");
 		addTexturePreview("../assets/pumpkin.png");
 	}
 	
@@ -227,19 +223,15 @@ public:
 		{
 			for(TexturePackPreview & preview : texturePreviews)
 			{
-				if(CURSOR->isPressed)
+				if(Collision::AABB(*CURSOR, preview) && CURSOR->isPressed())
 				{
-					if(Collision::AABB(*CURSOR, preview))
-					{
-						preview.isSelected = true;
-						SELECTED_TEXTURE_PACK = &preview;
-						CURSOR->isPressed = true;
-					}
-					else
-					{
-						preview.isSelected = false;
-					}					
+					preview.isSelected = true;
+					SELECTED_TEXTURE_PACK = &preview;
 				}
+				else
+				{
+					preview.isSelected = false;
+				}					
 				preview.update();
 			}
 		}
@@ -308,10 +300,12 @@ public:
 		// add drop down menus
 		for(Option & option : options)
 		{
-			dropdownMenus.push_back(ToolBar_dropdown(
-				sf::Vector2f(
-				option.getPosition().x, 
-				option.getPosition().y + option.getSize().y
+			dropdownMenus.push_back(
+				ToolBar_dropdown
+				(
+					sf::Vector2f(
+					option.getPosition().x, 
+					option.getPosition().y + option.getSize().y
 				)
 			));
 		}
@@ -326,6 +320,7 @@ public:
 		dropdownMenus[DropDownMenus::File].addOption("Open...", [&]()
 		{
 			printf("Open!\n");
+			FILE_EXPLORER->open();
 		});
 		
 		dropdownMenus[DropDownMenus::File].addOption("----------------", [](){}, false);
@@ -367,55 +362,51 @@ public:
 	
 	void update()
 	{
-		if(CURSOR->isPressed)
+		if(CURSOR->isClicked)
 		{
 			for(ToolBar_dropdown & ddMenu : dropdownMenus)
 			{
 				ddMenu.select(false);
 			}
-			
-			if(selectedIndex >= 0)
+		}
+		
+		if(selectedIndex >= 0)
+		{
+			if(Collision::AABB(*CURSOR, dropdownMenus[selectedIndex])  && CURSOR->isPressed())
 			{
-				if(Collision::AABB(*CURSOR, dropdownMenus[selectedIndex]))
+				for(Option & option : dropdownMenus[selectedIndex].options)
 				{
-					for(Option & option : dropdownMenus[selectedIndex].options)
+					if(Collision::AABB(*CURSOR, option))
 					{
-						if(Collision::AABB(*CURSOR, option))
-						{
-							option.action();
-						}
-					}
-				}
-			}
-			if(Collision::AABB(*CURSOR, *this))
-			{
-				int index = -1;
-				for(unsigned int i = 0; i < options.size(); i++)
-				{
-					if(Collision::AABB(*CURSOR, options[i]))
-					{
-						index = i;
+						option.action();
 						break;
 					}
 				}
-				if(index >= 0)
+			}
+		}
+		if(Collision::AABB(*CURSOR, *this) && CURSOR->isPressed())
+		{
+			int index = -1;
+			for(unsigned int i = 0; i < options.size(); i++)
+			{
+				if(Collision::AABB(*CURSOR, options[i]))
 				{
-					if(index == selectedIndex)
-					{
-						isSelected = isSelected ? false : true;
-						dropdownMenus[selectedIndex].select(isSelected);
-					}
-					else
-					{
-						dropdownMenus[index].select(true);
-						selectedIndex = index;
-						isSelected = true;
-					}
+					index = i;
+					break;
+				}
+			}
+			if(index >= 0)
+			{
+				if(index == selectedIndex)
+				{
+					isSelected = isSelected ? false : true;
+					dropdownMenus[selectedIndex].select(isSelected);
 				}
 				else
 				{
-					selectedIndex = -1;
-					isSelected = false;
+					dropdownMenus[index].select(true);
+					selectedIndex = index;
+					isSelected = true;
 				}
 			}
 			else
@@ -424,6 +415,7 @@ public:
 				isSelected = false;
 			}
 		}
+		
 		
 		if(options.size())
 		{
@@ -440,7 +432,6 @@ public:
 				ddMenu.update();
 			}
 		}
-		
 		
 	}
 	
@@ -479,15 +470,11 @@ public:
 	Tab()
 	{}
 
-	Tab(std::string label, sf::Vector2f pos, sf::Vector2f size, bool isSelected = false) : Option(label, [&]()->void
-	{
-	}, pos),
-	closeButton("x", []()->void
-	{
-		printf("close tab\n");
-	}, sf::Vector2f(pos.x + size.x - FONT_SIZE, pos.y), true),
-	selectedOverlay(size.x, 2),
-	isSelected(isSelected)
+	Tab(std::string label, sf::Vector2f pos, sf::Vector2f size, bool isSelected = false) : 
+		Option(label, [&]()->void {}, pos),
+		closeButton("x", []()->void	{printf("close tab\n");}, sf::Vector2f(pos.x + size.x - FONT_SIZE, pos.y), true),
+		selectedOverlay(size.x, 2),
+		isSelected(isSelected)
 	{		
 		setPosition(pos);
 		setSize(size);
@@ -601,20 +588,18 @@ public:
 			bool wasSelected = false;
 			for(unsigned int i = 0; i < tabs.size(); i++)
 			{
-				if(CURSOR->isPressed)
+				if(Collision::AABB(*CURSOR, tabs[i]) && CURSOR->isPressed())
 				{
-					if(Collision::AABB(*CURSOR, tabs[i]))
-					{
-						selectedIndex = i;
-					}
-					if(Collision::AABB(*CURSOR, tabs[i].closeButton))
-					{
-						yeetIndex = i;
-						wasSelected = tabs[i].isSelected;
-					}
+					selectedIndex = i;
+					break;
+				}
+				if(Collision::AABB(*CURSOR, tabs[i].closeButton) && CURSOR->isPressed())
+				{
+					yeetIndex = i;
+					wasSelected = tabs[i].isSelected;
+					break;
 				}
 			}
-			
 			if(yeetIndex >= 0)
 			{
 				std::vector<Tab> newTabs;

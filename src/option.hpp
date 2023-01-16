@@ -45,11 +45,10 @@ public:
 	{
 		if(highLightOnHover && isVisible)
 		{
-			bool isPressed = CURSOR->isPressed;
 			if(Collision::AABB(*CURSOR, *this))
 			{
 				hoverBox.setFillColor(sf::Color(hoverColor.r, hoverColor.g, hoverColor.b, transparency));
-				if(isPressed)
+				if(CURSOR->isPressed())
 				{
 					doAction();
 				}
@@ -92,6 +91,8 @@ public:
 		setPosition(pos);
 		hoverBox.setPosition(pos);
 		hoverBox.setFillColor(sf::Color::Transparent);
+		hoverBox.setOutlineThickness(1);
+		hoverBox.setOutlineColor(sf::Color::Red);
 	}	
 
 	virtual void update()

@@ -14,8 +14,8 @@ void freeResources();
 int
 main(int argc, char ** argv)
 {
-	int screenWidth = sf::VideoMode::getDesktopMode().width * 0.8;
-	int screenHeight = sf::VideoMode::getDesktopMode().height * 0.8;	
+	int screenWidth = sf::VideoMode::getDesktopMode().width * WINDOW_SIZE_MULTIPLIER;
+	int screenHeight = sf::VideoMode::getDesktopMode().height * WINDOW_SIZE_MULTIPLIER;	
 
 	initResources();
 	
@@ -28,6 +28,11 @@ main(int argc, char ** argv)
 	WINDOW->setActive(true);
 	WINDOW->setView(sf::View(sf::FloatRect(VIEW_CENTER_X, VIEW_CENTER_Y, screenWidth, screenHeight)));
 	WINDOW->setKeyRepeatEnabled(false);
+
+	int FE_screenWidth = screenWidth * WINDOW_SIZE_MULTIPLIER;
+	int FE_screenHeight = screenHeight * WINDOW_SIZE_MULTIPLIER;
+
+	FILE_EXPLORER = new FileExplorer(sf::Vector2f(FE_screenWidth, FE_screenHeight), sf::Vector2f((screenWidth-FE_screenWidth)/2, (screenHeight-FE_screenHeight)/2));
 
 	sf::Image window_icon;
 	window_icon.loadFromFile("../assets/pumpkin.png");
@@ -42,11 +47,13 @@ main(int argc, char ** argv)
 /* Main loop starts here ...																			 */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+//	printf("argv: %s", argv[0]);
+
 	while (WINDOW->isOpen())
 	{
 		try
 		{
-			CURSOR->isPressed = false;
+			CURSOR->isClicked = false;
 			while (WINDOW->pollEvent(event))
 			{
 				if(event.type == sf::Event::Closed) WINDOW->close();
@@ -65,18 +72,24 @@ main(int argc, char ** argv)
 				{
 					if(event.mouseButton.button == sf::Mouse::Button::Left)
 					{
-						CURSOR->isPressed = true;
+						CURSOR->isClicked = true;
 					}
 				}
 			}
 			CURSOR->update(sf::Vector2f(sf::Mouse::getPosition(*WINDOW).x, sf::Mouse::getPosition(*WINDOW).y));
-			
-			UI.update();
+
+			FILE_EXPLORER->update();
+
+			if(!FILE_EXPLORER->isOpen())
+			{
+				UI.update();
+			}
 			
 			WINDOW->clear(clearColor);
-
+			
 			UI.render(*WINDOW);
-			CURSOR->render(*WINDOW);
+
+			FILE_EXPLORER->render(*WINDOW);
 
 			WINDOW->display();
 		}
@@ -111,4 +124,5 @@ void freeResources()
 		}
 	}
 	delete FONT;
+	delete FILE_EXPLORER;
 }

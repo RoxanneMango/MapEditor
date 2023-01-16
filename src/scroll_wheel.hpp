@@ -38,8 +38,7 @@ public:
 		if(isEnabled)
 		{
 			wheeliePiece.setFillColor(enabledColor);
-			bool isPressed = CURSOR->isPressed;
-			if(isPressed)
+			if(CURSOR->isPressed())
 			{
 				if(Collision::AABB(*CURSOR, wheeliePiece))
 				{
