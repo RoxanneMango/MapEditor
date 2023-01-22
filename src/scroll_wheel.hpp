@@ -19,9 +19,10 @@ public:
 
 	Object wheeliePiece;
 
-	ScrollWheel_vertical(sf::Vector2f size, sf::Vector2f pos) : Object(size), wheeliePiece(sf::Vector2f(size.x, size.y/4))
+	ScrollWheel_vertical(sf::Vector2f size, sf::Vector2f pos) : wheeliePiece(sf::Vector2f(size.x, size.y/4))
 	{
 		setPosition(pos);
+		setSize(size);
 		setFillColor(disabledColor);
 		setOutlineThickness(2);
 		setOutlineColor(sf::Color::Black);
@@ -38,15 +39,11 @@ public:
 		if(isEnabled)
 		{
 			wheeliePiece.setFillColor(enabledColor);
-			if(CURSOR->isPressed())
+			if(Collision::AABB(*CURSOR, wheeliePiece))
 			{
-				if(Collision::AABB(*CURSOR, wheeliePiece))
+				if(CURSOR->isPressed())
 				{
 					isSelected = isSelected ? false : true;
-				}
-				else
-				{
-					isSelected = false;
 				}
 			}
 			if(isSelected)

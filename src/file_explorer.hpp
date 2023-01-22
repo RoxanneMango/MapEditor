@@ -14,6 +14,7 @@
 #include "constants.hpp"
 #include "cursor.hpp"
 #include "collision.hpp"
+#include "toolbar_textures.hpp"
 
 namespace FileExplorerButton
 {
@@ -161,29 +162,48 @@ private:
 		{
 			chdir(dir.c_str());
 			char current_directory[512] = {0};
-			cwd = getcwd(current_directory, sizeof(current_directory));
-			currentDirectory_txt.setString(cwd);
-			
-			std::string path = cwd;
-
-			DIR * testDIR = opendir(cwd.c_str());
-			if(testDIR != NULL)
+			std::string newDir = getcwd(current_directory, sizeof(current_directory));
+			if(strcmp(cwd.c_str(), newDir.c_str()))
 			{
-				// Append directory name to the directory_entries list if its at the back element
-				if((entries_index == (directory_entries.size()-1)) || (!directory_entries.size()))
-				{
-					printf("pushed!\n");
-					directory_entries.push_back(cwd.c_str());
-					if(directory_entries.size() >= max_entries)
-					{
-						directory_entries.pop_front();
-					}
-					entries_index = directory_entries.size()-1;
-				}
-			}
-			closedir(testDIR);
+				cwd = newDir;
+				currentDirectory_txt.setString(cwd);
+				
+				printf("dir: %s\n", cwd.c_str());
 
-			readDirEntries();
+/*
+				DIR * testDIR = opendir(cwd.c_str());
+				if(testDIR != NULL)
+				{
+					// Append directory name to the directory_entries list if its at the back element
+					if((entries_index >= (directory_entries.size()-1)) || (!directory_entries.size()))
+					{
+						printf("pushed!\n");
+						directory_entries.push_back(cwd.c_str());
+						if(directory_entries.size() >= max_entries)
+						{
+							printf("POP!\n");
+							directory_entries.pop_front();
+						}
+						entries_index = directory_entries.size()-1;
+						printf("entries_index: %d\n", entries_index);
+					}
+				}
+				closedir(testDIR);
+*/
+				
+				readDirEntries();				
+			}
+			else	// It's not a directory but a file: try to open it
+			{
+				if(dir.size() >= 3)
+				{
+					if(TOOLBAR_TEXTURES->addTexturePreview(std::string(cwd + "/" + dir))) // if this function returns (1)
+					{
+						close();
+					}
+				}
+				printf("file %s\n", dir.c_str());
+			}
 		}
 		catch(...)
 		{
@@ -225,6 +245,10 @@ public:
 		currentDirectory_txt = sf::Text(cwd, *FONT, FONT_SIZE);
 		currentDirectory_txt.setPosition(sf::Vector2f(currentDirectory.getPosition().x + 5, currentDirectory.getPosition().y + 5));
 		currentDirectory_txt.setFillColor(sf::Color::Black);
+
+		printf("initial push!\n");
+		directory_entries.push_back(cwd.c_str());
+		entries_index = directory_entries.size()-1;		
 
 		readDirEntries();
 
@@ -276,7 +300,6 @@ public:
 						if(entries_index > 0)
 						{
 							changeDirectory(directory_entries[--entries_index]);
-							printf("index: %d\n", entries_index);
 						}
 					}
 					else if(forwardButton.isPressed())
@@ -284,7 +307,6 @@ public:
 						if(entries_index < (directory_entries.size()-1))
 						{
 							changeDirectory(directory_entries[++entries_index]);
-							printf("index: %d\n", entries_index);
 						}
 					}
 				}
@@ -348,5 +370,7 @@ public:
 	
 	
 };
+
+FileExplorer * FILE_EXPLORER;
 
 #endif // FILE_EXPLORER.HPP

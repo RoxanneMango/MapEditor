@@ -2,9 +2,8 @@
 #define GLOBAL_HPP
 
 #include <SFML/Graphics.hpp>
-#include "file_explorer.hpp"
 
 sf::RenderWindow * WINDOW;
-FileExplorer * FILE_EXPLORER;
+std::vector<sf::Texture *> * TEXTURE_PACKS;
 
 #endif // GLOBAL_HPP
