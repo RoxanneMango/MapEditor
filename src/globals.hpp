@@ -6,4 +6,6 @@
 sf::RenderWindow * WINDOW;
 std::vector<sf::Texture *> * TEXTURE_PACKS;
 
+unsigned int TILE_SIZE = 64;
+
 #endif // GLOBAL_HPP

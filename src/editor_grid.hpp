@@ -14,6 +14,7 @@ public:
 	int margin = 2;
 	int textMargin = 10;
 	
+	unsigned int selectedIndex = 0;
 	bool isSelected = false;
 	std::string ID = "";
 
@@ -23,7 +24,7 @@ public:
 	{
 		setPosition(pos);
 
-		setFillColor(sf::Color::Blue);
+		setFillColor(sf::Color(200,200,200));
 		setOutlineThickness(0.5);
 		setOutlineColor(sf::Color::Black);
 		
@@ -39,12 +40,14 @@ public:
 
 				Tile tile(sf::Vector2f(tile_size, tile_size), sf::Vector2f(pos.x + texturePos.x + margin*x, pos.y + texturePos.y + margin*y));
 
-//				tile.setTexture(texture);
 				tile.index = x + (y*texturePackTileNum.x);
 				tile.ID = PATH;
-//				tile.setTextureRect(sf::IntRect(texturePos.x, texturePos.y, tile_size, tile_size));
-				tile.setOutlineThickness(1);
-				tile.setOutlineColor(sf::Color(0, 0, 0, 150));
+
+				sf::Color color = tile.getFillColor();
+				color.a = 0;
+				tile.setFillColor(color);
+
+				tile.hoverBox.setOutlineColor(sf::Color(0,0,0,200));
 				tile.hoverColor = sf::Color::Black;
 				tiles.push_back(tile);
 			}
@@ -87,17 +90,23 @@ public:
 			{
 				if(tile.isVisible)
 				{
-					if(Collision::AABB(*CURSOR, tile) || ((tile.index == Tile::selectedIndex) && (tile.ID == Tile::selectedID)) )
+					if(Collision::AABB(*CURSOR, tile))// || (tile.index == selectedIndex) )
 					{
 						tile.hoverBox.setFillColor(sf::Color(tile.hoverColor.r, tile.hoverColor.g, tile.hoverColor.b, tile.transparency));						
-						if(tile.index != Tile::selectedIndex)
+						if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && SELECTED_TEXTURE_PACK)
+//						if(CURSOR->isPressed() && SELECTED_TEXTURE_PACK)
 						{
-							if(CURSOR->isPressed())
-							{
-								Tile::selectedIndex = tile.index;
-								Tile::selectedID = tile.ID;
-								printf("Tile_index: %d\n", Tile::selectedIndex);
-							}
+//							printf("Tile_index: %d\n", Tile::selectedIndex);
+							tile.setTexture(SELECTED_TEXTURE_PACK->tiles[Tile::selectedIndex].getTexture());
+							tile.setTextureRect(SELECTED_TEXTURE_PACK->tiles[Tile::selectedIndex].getTextureRect());
+
+							sf::Color color = tile.getFillColor();
+							color.a = 255;
+							tile.setFillColor(color);
+							
+//							selectedIndex = tile.index;
+//							tile.index = Tile::selectedIndex;
+//							tile.ID = Tile::selectedID;
 						}
 					}
 					else
@@ -110,7 +119,7 @@ public:
 					}
 					else
 					{
-						tile.setOutlineColor(sf::Color::Black);						
+						tile.setOutlineColor(sf::Color::Black);
 					}
 				}
 			}

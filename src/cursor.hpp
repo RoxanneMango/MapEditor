@@ -3,19 +3,33 @@
 
 #include <SFML/Graphics.hpp>
 
+#include "tile.hpp"
+
+class Cursor;
+Cursor * CURSOR;
+
 class Cursor : public sf::RectangleShape
 {
+	sf::RectangleShape body;
+	float transparency = 0.66;
+	float scale = 0.8;
 public:
-	Cursor() : sf::RectangleShape(sf::Vector2f(1, 1))
+	bool isClicked = false;
+	
+	Cursor() : sf::RectangleShape(sf::Vector2f(1, 1)), body(sf::Vector2f(TILE_SIZE, TILE_SIZE))
 	{
 		setFillColor(sf::Color::Red);
+		
+		body.setOrigin(body.getSize().x/2, body.getSize().y/2);
+		body.setScale(scale, scale);
+		sf::Color c = body.getFillColor();
+		body.setFillColor(sf::Color(c.r, c.g, c.b, c.a*transparency));
 	}
-	
-	bool isClicked = false;
 	
 	void update(sf::Vector2f pos)
 	{
 		setPosition(pos);
+		body.setPosition(pos);
 	}
 	
 	bool isPressed()
@@ -31,9 +45,15 @@ public:
 	void render(sf::RenderWindow & window)
 	{
 		window.draw(*this);
+		if(body.getTexture() != NULL) window.draw(body);
 	}
+	
+	void setBody(Tile & tile)
+	{
+		body.setTexture(tile.getTexture());
+		body.setTextureRect(tile.getTextureRect());
+	}
+	
 };
-
-Cursor * CURSOR;
 
 #endif // CURSOR_HPP

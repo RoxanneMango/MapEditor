@@ -12,7 +12,6 @@
 class UserInterface : public sf::RectangleShape
 {
 private:
-
 	int toolbar_A_height = 30;
 	int toolbar_B_height = 60;
 
@@ -61,7 +60,7 @@ public:
 		toolbar_B(sf::Vector2f(width, toolbar_B_height), sf::Vector2f(0, toolbar_A.getSize().y)),
 		editorGrid(sf::Vector2f(600, 600), sf::Vector2f(600, 100), "Editor_Grid")
 	{
-		TOOLBAR_TEXTURES = new ToolBar_textures(sf::Vector2f(534, 600), sf::Vector2f(10, toolbar_B.getPosition().y + toolbar_B.getSize().y + 10));
+		TOOLBAR_TEXTURES = new ToolBar_textures(sf::Vector2f(534, 590), sf::Vector2f(10, toolbar_B.getPosition().y + toolbar_B.getSize().y + 10));
 		toolbar_textures = TOOLBAR_TEXTURES;
 		
 		foregroundImage.create(width, height, sf::Color(125, 145, 160));
@@ -69,8 +68,8 @@ public:
 		createFloatRectMask(*toolbar_textures);
 		createFloatRectMask(toolbar_textures->scrollWheel);
 	
-		editorGrid.setSize(sf::Vector2f(800, 600));
-		editorGrid.setFillColor(sf::Color::Blue);
+		editorGrid.setSize(sf::Vector2f(790, 590));
+//		editorGrid.setFillColor(sf::Color::Blue);
 		createFloatRectMask(editorGrid);
 
 		foregroundTexture.loadFromImage(foregroundImage);

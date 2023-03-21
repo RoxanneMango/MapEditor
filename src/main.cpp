@@ -54,6 +54,7 @@ main(int argc, char ** argv)
 		try
 		{
 			CURSOR->isClicked = false;
+//			CURSOR->isClicked = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
 			while (WINDOW->pollEvent(event))
 			{
 				if(event.type == sf::Event::Closed) WINDOW->close();
@@ -90,6 +91,8 @@ main(int argc, char ** argv)
 			UI.render(*WINDOW);
 
 			FILE_EXPLORER->render(*WINDOW);
+
+			CURSOR->render(*WINDOW);
 
 			WINDOW->display();
 		}

@@ -107,59 +107,59 @@ public:
 	void update()
 	{
 		if(CURSOR->isClicked)
-		{
-			for(ToolBar_dropdown & ddMenu : dropdownMenus)
+		{			
+			if(Collision::AABB(*CURSOR, *this))
 			{
-				ddMenu.select(false);
+				int index = -1;
+				for(unsigned int i = 0; i < options.size(); i++)
+				{
+					if(Collision::AABB(*CURSOR, options[i]))
+					{
+						index = i;
+						break;
+					}
+				}
+				if(index >= 0)
+				{
+					if(index == selectedIndex)
+					{
+						isSelected = isSelected ? false : true;
+						dropdownMenus[selectedIndex].select(isSelected);
+					}
+					else
+					{
+						dropdownMenus[index].select(true);
+						selectedIndex = index;
+						isSelected = true;
+					}
+				}
+				else
+				{
+					selectedIndex = -1;
+					isSelected = false;
+				}
 			}
-		}
-		
-		if(selectedIndex >= 0)
-		{
-			if(Collision::AABB(*CURSOR, dropdownMenus[selectedIndex])  && CURSOR->isPressed())
+			else if((selectedIndex >= 0) && dropdownMenus[selectedIndex].isVisible)
 			{
 				for(Option & option : dropdownMenus[selectedIndex].options)
 				{
 					if(Collision::AABB(*CURSOR, option))
 					{
 						option.action();
+						CURSOR->isPressed();
+						dropdownMenus[selectedIndex].select(false);
 						break;
 					}
 				}
 			}
-		}
-		if(Collision::AABB(*CURSOR, *this) && CURSOR->isPressed())
-		{
-			int index = -1;
-			for(unsigned int i = 0; i < options.size(); i++)
-			{
-				if(Collision::AABB(*CURSOR, options[i]))
-				{
-					index = i;
-					break;
-				}
-			}
-			if(index >= 0)
-			{
-				if(index == selectedIndex)
-				{
-					isSelected = isSelected ? false : true;
-					dropdownMenus[selectedIndex].select(isSelected);
-				}
-				else
-				{
-					dropdownMenus[index].select(true);
-					selectedIndex = index;
-					isSelected = true;
-				}
-			}
 			else
 			{
-				selectedIndex = -1;
-				isSelected = false;
+				for(ToolBar_dropdown & ddMenu : dropdownMenus)
+				{
+					ddMenu.select(false);
+				}				
 			}
-		}
-		
+		}			
 		
 		if(options.size())
 		{

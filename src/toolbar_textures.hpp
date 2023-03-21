@@ -59,7 +59,7 @@ public:
 				
 				if(Collision::AABB(*CURSOR, texturePreviews[i]) && CURSOR->isClicked)
 				{
-					printf("texturePackPreview selected\n");
+//					printf("texturePackPreview selected\n");
 					texturePreviews[i].isSelected = true;
 					SELECTED_TEXTURE_PACK = &texturePreviews[i];
 				}
@@ -88,7 +88,7 @@ public:
 	int addTexturePreview(std::string PATH)
 	{
 		sf::Vector2f position(sf::Vector2f(getPosition().x + margin.x/2, getPosition().y + texturesHeight));
-		TexturePackPreview tpp(textureSize, position, PATH);
+		TexturePackPreview tpp(texturePreviews.size(), textureSize, position, PATH);
 
 		if(tpp.tiles.size())
 		{

@@ -15,6 +15,7 @@
 #include "cursor.hpp"
 #include "collision.hpp"
 #include "toolbar_textures.hpp"
+#include "globals.hpp"
 
 namespace FileExplorerButton
 {
@@ -168,8 +169,7 @@ private:
 				cwd = newDir;
 				currentDirectory_txt.setString(cwd);
 				
-				printf("dir: %s\n", cwd.c_str());
-
+//				printf("dir: %s\n", cwd.c_str());
 /*
 				DIR * testDIR = opendir(cwd.c_str());
 				if(testDIR != NULL)
@@ -246,9 +246,9 @@ public:
 		currentDirectory_txt.setPosition(sf::Vector2f(currentDirectory.getPosition().x + 5, currentDirectory.getPosition().y + 5));
 		currentDirectory_txt.setFillColor(sf::Color::Black);
 
-		printf("initial push!\n");
-		directory_entries.push_back(cwd.c_str());
-		entries_index = directory_entries.size()-1;		
+//		printf("initial push!\n");
+//		directory_entries.push_back(cwd.c_str());
+//		entries_index = directory_entries.size()-1;		
 
 		readDirEntries();
 
