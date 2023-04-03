@@ -12,6 +12,7 @@
 #include "scroll_wheel.hpp"
 #include "file_explorer.hpp"
 
+#include "context.hpp"
 
 class Tab : public Option
 {
@@ -27,13 +28,21 @@ public:
 
 	sf::Vector2f margin = sf::Vector2f(5, 5);
 
+	Context * context = NULL;
+
 	Tab()
 	{}
 
-	Tab(std::string label, sf::Vector2f pos, sf::Vector2f size, bool isSelected = false) : 
+	~Tab()
+	{
+//		delete context;
+	}
+
+	Tab(std::string label, sf::Vector2f pos, sf::Vector2f size, Context * context, bool isSelected = false) : 
 		Option(label, [&]()->void {}, pos),
 		closeButton("x", []()->void	{printf("close tab\n");}, sf::Vector2f(pos.x + size.x - FONT_SIZE, pos.y), true),
 		selectedOverlay(size.x, 2),
+		context(context),
 		isSelected(isSelected)
 	{		
 		setPosition(pos);
@@ -96,9 +105,6 @@ public:
 	}
 };
 
-std::vector<Tab> * TAB_LIST;
-unsigned int TAB_INDEX = 0;
-
 class ToolBar_tab : public Object
 {
 private:
@@ -111,15 +117,20 @@ private:
 	
 	sf::Vector2f tabSize = sf::Vector2f(150, 25);
 	
+	std::vector<Context *> * contextList;
+	
 public:
+	int selectedIndex = -1;
 	std::vector<Tab> tabs;
 
 	ToolBar_tab()
 	{}
 
-	ToolBar_tab(sf::Vector2f size, sf::Vector2f position) : top(sf::Vector2f(size.x, size.y/2)), 
-	line(size.x, 2),
-	Object(sf::Vector2f(size.x, size.y/2))
+	ToolBar_tab(sf::Vector2f size, sf::Vector2f position, std::vector<Context *> * contextList) : 
+		Object(sf::Vector2f(size.x, size.y/2)),
+		top(sf::Vector2f(size.x, size.y/2)), 
+		line(size.x, 2),
+		contextList(contextList)
 	{
 		top.setPosition(position);
 		setPosition(sf::Vector2f(position.x, position.y + top.getSize().y));
@@ -127,43 +138,75 @@ public:
 		
 		top.setFillColor(sf::Color(180, 190, 200));
 		setFillColor(sf::Color(125, 145, 160));
-		
-		addOption("Home");
-		addOption("map_a");
-		addOption("map_b");
 	}
 	
-	void addOption(std::string label)
+	void init(sf::Vector2f size, sf::Vector2f position)
+	{
+		setSize(sf::Vector2f(size.x, size.y/2));
+		setPosition(sf::Vector2f(position.x, position.y + top.getSize().y));
+		
+		top.setSize(sf::Vector2f(size.x, size.y/2));
+		top.setPosition(position);
+
+		line.length = size.x;
+		line.thickness = 2;
+		line.direction = sf::Line::Direction::Right;
+		line.setPosition(getPosition());
+		
+		top.setFillColor(sf::Color(180, 190, 200));
+		setFillColor(sf::Color(125, 145, 160));
+	}
+	
+	void addOption(std::string label, Context * context)
 	{
 		sf::Vector2f pos = sf::Vector2f(getPosition().x + margin_x + (margin_x*tabs.size()) + (tabSize.x*tabs.size()), top.getPosition().y + margin_y);
-		tabs.push_back(Tab(label, pos, tabSize, tabs.size() == 0));
+		tabs.push_back(Tab(label, pos, tabSize, context, tabs.size() == 0));
 	}
 	
 	void update()
 	{
 		if(tabs.size())
 		{
-			int selectedIndex = -1;
+			selectedIndex = -1;
 			int yeetIndex = -1;
 			bool wasSelected = false;
 			for(unsigned int i = 0; i < tabs.size(); i++)
 			{
-				if(Collision::AABB(*CURSOR, tabs[i]) && CURSOR->isPressed())
-				{
-					selectedIndex = i;
-					break;
-				}
 				if(Collision::AABB(*CURSOR, tabs[i].closeButton) && CURSOR->isPressed())
 				{
 					yeetIndex = i;
 					wasSelected = tabs[i].isSelected;
 					break;
 				}
+				if(Collision::AABB(*CURSOR, tabs[i]) && CURSOR->isPressed())
+				{
+					selectedIndex = i;
+					CURRENT_CONTEXT = tabs[i].context;
+					break;
+				}
 			}
 			if(yeetIndex >= 0)
 			{
-				std::vector<Tab> newTabs;
+				for(unsigned int i = 0; i < contextList->size(); i++)
+				{
+					if((*contextList)[i] == tabs[yeetIndex].context)
+					{
+						contextList->erase(contextList->begin()+i);
+						if(CURRENT_CONTEXT == tabs[yeetIndex].context)
+						{
+							CURRENT_CONTEXT =
+								(yeetIndex+1) < tabs.size() ? 
+									tabs[yeetIndex+1].context :
+								(yeetIndex-1) > 0 ? 
+									tabs[yeetIndex-1].context :
+								nullptr;
+						}
+						delete tabs[yeetIndex].context;
+						break;
+					}
+				}
 				
+				std::vector<Tab> newTabs;
 				for(unsigned int i = 0; i < tabs.size(); i++)
 				{
 					if(i != yeetIndex)
@@ -174,11 +217,12 @@ public:
 				tabs.clear();
 				for(Tab tab : newTabs)
 				{
-					addOption(tab.text.getString());
+					addOption(tab.text.getString(), tab.context);
 				}
+				
 				if(wasSelected)
 				{
-					selectedIndex = yeetIndex - 1;
+					selectedIndex = yeetIndex < tabs.size() ? yeetIndex : yeetIndex-1;
 				}
 				else
 				{

@@ -37,6 +37,7 @@ public:
 		pos.y += FONT_SIZE + textMargin;
 		setPosition(pos);
 
+		setSize(size);
 		setFillColor(sf::Color::Green);
 		setOutlineThickness(0.5);
 		setOutlineColor(sf::Color::Black);
@@ -46,7 +47,6 @@ public:
 			printf("Could not load texture! (%s)\n", PATH.c_str());
 			return;
 		}
-
 
 		TEXTURE_PACKS->push_back(texture);
 		
@@ -74,7 +74,7 @@ public:
 		title.setStyle(sf::Text::Bold);
 		title.setFillColor(sf::Color::White);
 		
-		setSize(sf::Vector2f(size.x, texturePackTileNum.y*tile_size + (margin*texturePackTileNum.y-1)));
+		setSize(sf::Vector2f(texturePackTileNum.x*tile_size + (margin*texturePackTileNum.x-1), texturePackTileNum.y*tile_size + (margin*texturePackTileNum.y-1)));
 		
 	}
 	
@@ -115,7 +115,19 @@ public:
 			{
 				if(tile.isVisible)
 				{
-					if(Collision::AABB(*CURSOR, tile) || ((tile.index == Tile::selectedIndex) && (tile.ID == Tile::selectedID)) )
+					if(Collision::AABB(*CURSOR, tile) && (sf::Mouse::isButtonPressed(sf::Mouse::Left)))
+					{
+						if(sf::Mouse::isButtonPressed(sf::Mouse::Left))
+						{
+							CURSOR->setMode(CursorMode::Paint);
+							if(SELECTED_TEXTURE_PACK)
+							{
+								CURSOR->setBody(SELECTED_TEXTURE_PACK->tiles[Tile::selectedIndex]);
+								SELECTED_TEXTURE_PACK->isSelected = true;
+							}
+						}
+					}
+					if(Collision::AABB(*CURSOR, tile) || (isSelected && (tile.index == Tile::selectedIndex) && (tile.ID == Tile::selectedID)) )
 					{
 						tile.hoverBox.setFillColor(sf::Color(tile.hoverColor.r, tile.hoverColor.g, tile.hoverColor.b, tile.transparency));						
 						if( (tile.index != Tile::selectedIndex) || (index != TexturePackPreview::selectedIndex) )
@@ -129,8 +141,7 @@ public:
 								sf::Vector2u ts = texture->getSize();
 								int x = index % (ts.x / tile_size);
 								int y = index / (ts.x / tile_size);
-								
-								
+
 								CURSOR->setBody(tile);
 
 								printf("Texture_index: %d ; Tile_index: %d\n", TexturePackPreview::selectedIndex, Tile::selectedIndex);

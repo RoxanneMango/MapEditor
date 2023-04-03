@@ -13,18 +13,16 @@ void freeResources();
 
 int
 main(int argc, char ** argv)
-{
+{	
 	int screenWidth = sf::VideoMode::getDesktopMode().width * WINDOW_SIZE_MULTIPLIER;
 	int screenHeight = sf::VideoMode::getDesktopMode().height * WINDOW_SIZE_MULTIPLIER;	
 
 	initResources();
 	
-	UserInterface UI(screenWidth, screenHeight);
-	
 	WINDOW = new sf::RenderWindow;
 	WINDOW->create(sf::VideoMode(screenWidth, screenHeight), WINDOW_TITLE, sf::Style::Default);
 	WINDOW->setFramerateLimit(FRAME_RATE_LIMIT);
-	WINDOW->setVerticalSyncEnabled(true);
+	WINDOW->setVerticalSyncEnabled(false);
 	WINDOW->setActive(true);
 	WINDOW->setView(sf::View(sf::FloatRect(VIEW_CENTER_X, VIEW_CENTER_Y, screenWidth, screenHeight)));
 	WINDOW->setKeyRepeatEnabled(false);
@@ -49,12 +47,33 @@ main(int argc, char ** argv)
 
 //	printf("argv: %s", argv[0]);
 
+	fp::SetCursor(sf::Cursor::Arrow);
+
+	sf::Clock updateClock;
+	float updateTime = 60;
+
+	UserInterface UI(screenWidth, screenHeight);
+
 	while (WINDOW->isOpen())
 	{
 		try
 		{
-			CURSOR->isClicked = false;
-//			CURSOR->isClicked = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
+			// only handle input like that if window is in focus
+			if(WINDOW->hasFocus())
+			{
+				if(updateClock.getElapsedTime().asMilliseconds() > updateTime)
+				{
+					if(sf::Keyboard::isKeyPressed(sf::Keyboard::A)) UI.moveLeft.action();
+					if(sf::Keyboard::isKeyPressed(sf::Keyboard::D)) UI.moveRight.action();
+					if(sf::Keyboard::isKeyPressed(sf::Keyboard::W)) UI.moveUp.action();
+					if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)) UI.moveDown.action();
+					
+					updateClock.restart();
+				}
+				
+				CURSOR->isClicked = false;
+	//			CURSOR->isClicked = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
+			}
 			while (WINDOW->pollEvent(event))
 			{
 				if(event.type == sf::Event::Closed) WINDOW->close();
@@ -62,12 +81,21 @@ main(int argc, char ** argv)
 				{
 					WINDOW->setView(sf::View(sf::FloatRect(0, 0, event.size.width, event.size.height)));
 				}
-				if(event.type == sf::Event::KeyPressed)
+				if(event.type == sf::Event::KeyPressed && WINDOW->hasFocus())
 				{
-					if(event.key.code == sf::Keyboard::Q || event.key.code == sf::Keyboard::Space)
-					{
-						WINDOW->close();
-					}
+					if(event.key.code == sf::Keyboard::Escape) WINDOW->close();
+
+					if(event.key.code == sf::Keyboard::Z) UI.zoomIn.action();
+					if(event.key.code == sf::Keyboard::X) UI.zoomOut.action();
+					
+					if(event.key.code == sf::Keyboard::F) CURSOR->setMode(CursorMode::Default);
+					if(event.key.code == sf::Keyboard::Q) CURSOR->setMode(CursorMode::Delete);					
+
+//					if(event.key.code == sf::Keyboard::A) UI.editorGrid.moveLeft.action();
+//					if(event.key.code == sf::Keyboard::D) UI.editorGrid.moveRight.action();
+//					if(event.key.code == sf::Keyboard::W) UI.editorGrid.moveUp.action();
+//					if(event.key.code == sf::Keyboard::S) UI.editorGrid.moveDown.action();
+
 				}
 				if(event.type == sf::Event::MouseButtonPressed)
 				{
@@ -76,7 +104,33 @@ main(int argc, char ** argv)
 						CURSOR->isClicked = true;
 					}
 				}
+				if(event.type == sf::Event::MouseWheelScrolled && WINDOW->hasFocus())
+				{
+					if(event.mouseWheelScroll.wheel == sf::Mouse::VerticalWheel)
+					{
+						printf("wheel type: vertical\n");
+						if(sf::Keyboard::isKeyPressed(sf::Keyboard::LShift))
+						{
+							printf("Zooming!\n");
+							double zoom = event.mouseWheelScroll.delta > 0 ? 0.1 : -0.1;
+							if(CURRENT_CONTEXT != nullptr) CURRENT_CONTEXT->editorGrid.changeScale(zoom);
+						}
+					}
+					else if(event.mouseWheelScroll.wheel == sf::Mouse::HorizontalWheel)
+					{
+						printf("wheel type: horizontal\n");
+					}
+					else
+					{
+						printf("wheel type: unknown\n");
+					}
+
+					printf("wheel movement: %f\n", event.mouseWheelScroll.delta);
+					printf("mouse x: %d\n", event.mouseWheelScroll.x);
+					printf("mouse y: %d\n", event.mouseWheelScroll.y);					
+				}				
 			}
+			
 			CURSOR->update(sf::Vector2f(sf::Mouse::getPosition(*WINDOW).x, sf::Mouse::getPosition(*WINDOW).y));
 
 			FILE_EXPLORER->update();

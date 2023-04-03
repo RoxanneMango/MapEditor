@@ -219,6 +219,9 @@ public:
 		setOutlineThickness(2);
 		setOutlineColor(sf::Color::Black);
 		
+		window_title.setFillColor(sf::Color::Black);
+		window_title.setPosition(sf::Vector2f(pos.x + 10, pos.y + 10));
+		
 		closeButton.setFillColor(sf::Color(200, 80, 80));
 		closeButton.setOutlineThickness(2);
 		closeButton.setOutlineColor(sf::Color::Black);
@@ -344,7 +347,9 @@ public:
 		{
 		
 			window.draw(*this);
-						
+			
+			window.draw(window_title);
+			
 			window.draw(closeButton);
 			window.draw(closeButton_x);
 			

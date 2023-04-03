@@ -6,6 +6,8 @@
 #include "toolbar_dropdown.hpp"
 #include "file_explorer.hpp"
 
+#include "stdio.h"
+
 class ToolBar_top : public Object
 {
 private:
@@ -30,72 +32,20 @@ public:
 	std::vector<Option> options;
 	std::vector<ToolBar_dropdown> & dropdownMenus = *DROP_DOWN_MENUS;
 
+	ToolBar_top()
+	{}
+
 	ToolBar_top(sf::Vector2f size) : Object(size)
 	{
 		setFillColor(sf::Color(180, 190, 200));
 		
-		// add options
-		addOption("File", [](){ printf("File...\n"); });
-		addOption("Edit", [](){	printf("Edit...\n"); });
-		addOption("Map",  [](){ printf("Map...\n");	 });
-		addOption("View", [](){	printf("View...\n"); });
-		addOption("Help", [](){ printf("Help...\n"); });
-		
-		// add drop down menus
-		for(Option & option : options)
-		{
-			dropdownMenus.push_back(
-				ToolBar_dropdown
-				(
-					sf::Vector2f(
-					option.getPosition().x, 
-					option.getPosition().y + option.getSize().y
-				)
-			));
-		}
-		
-		// start new map item for editor to use and possibly export for frankenpatch to use
-		dropdownMenus[DropDownMenus::File].addOption("New...", [&]()
-		{
-			printf("New!\n");
-		});
-		
-		// open saved map item for editor to use
-		dropdownMenus[DropDownMenus::File].addOption("Open...", [&]()
-		{
-			printf("Open!\n");
-			FILE_EXPLORER->open();
-		});
-		
-		dropdownMenus[DropDownMenus::File].addOption("----------------", [](){}, false);
-		
-		// save map into map save file for map editor to use
-		dropdownMenus[DropDownMenus::File].addOption("Save...", [&]()
-		{
-			printf("Save!\n");
-		});
-		
-		// export map into map object for frankenpatch game to use
-		dropdownMenus[DropDownMenus::File].addOption("Export...", [&]()
-		{
-			printf("Export!\n");
-		});
-		
-		// close current tab
-		dropdownMenus[DropDownMenus::File].addOption("Close...", [&]()
-		{
-			printf("Close!\n");
-		});
-
-
-		dropdownMenus[DropDownMenus::File].addOption("----------------", [](){}, false);	
-
-		// exit program
-		dropdownMenus[DropDownMenus::File].addOption("Exit...", []()
-		{ 
-			WINDOW->close();
-		});
+		// add options	
+	}
 	
+	void init(sf::Vector2f size)
+	{
+		setSize(size);
+		setFillColor(sf::Color(180, 190, 200));
 	}
 	
 	void addOption(std::string label, std::function<void()> func, bool highLightOnHover = true)
@@ -107,7 +57,7 @@ public:
 	void update()
 	{
 		if(CURSOR->isClicked)
-		{			
+		{
 			if(Collision::AABB(*CURSOR, *this))
 			{
 				int index = -1;
@@ -121,6 +71,10 @@ public:
 				}
 				if(index >= 0)
 				{
+					for(ToolBar_dropdown & ddMenu : dropdownMenus)
+					{
+						ddMenu.select(false);
+					}					
 					if(index == selectedIndex)
 					{
 						isSelected = isSelected ? false : true;
@@ -148,6 +102,8 @@ public:
 						option.action();
 						CURSOR->isPressed();
 						dropdownMenus[selectedIndex].select(false);
+						selectedIndex = -1;
+						isSelected = false;
 						break;
 					}
 				}
