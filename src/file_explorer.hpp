@@ -376,6 +376,4 @@ public:
 	
 };
 
-FileExplorer * FILE_EXPLORER;
-
 #endif // FILE_EXPLORER.HPP

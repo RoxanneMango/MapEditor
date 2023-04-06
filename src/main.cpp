@@ -27,11 +27,6 @@ main(int argc, char ** argv)
 	WINDOW->setView(sf::View(sf::FloatRect(VIEW_CENTER_X, VIEW_CENTER_Y, screenWidth, screenHeight)));
 	WINDOW->setKeyRepeatEnabled(false);
 
-	int FE_screenWidth = screenWidth * WINDOW_SIZE_MULTIPLIER;
-	int FE_screenHeight = screenHeight * WINDOW_SIZE_MULTIPLIER;
-
-	FILE_EXPLORER = new FileExplorer(sf::Vector2f(FE_screenWidth, FE_screenHeight), sf::Vector2f((screenWidth-FE_screenWidth)/2, (screenHeight-FE_screenHeight)/2));
-
 	sf::Image window_icon;
 	window_icon.loadFromFile("../assets/pumpkin.png");
 	WINDOW->setIcon(window_icon.getSize().x, window_icon.getSize().y, window_icon.getPixelsPtr());	
@@ -133,18 +128,11 @@ main(int argc, char ** argv)
 			
 			CURSOR->update(sf::Vector2f(sf::Mouse::getPosition(*WINDOW).x, sf::Mouse::getPosition(*WINDOW).y));
 
-			FILE_EXPLORER->update();
-
-			if(!FILE_EXPLORER->isOpen())
-			{
-				UI.update();
-			}
+			UI.update();
 			
 			WINDOW->clear(clearColor);
 			
 			UI.render(*WINDOW);
-
-			FILE_EXPLORER->render(*WINDOW);
 
 			CURSOR->render(*WINDOW);
 
@@ -181,5 +169,4 @@ void freeResources()
 		}
 	}
 	delete FONT;
-	delete FILE_EXPLORER;
 }

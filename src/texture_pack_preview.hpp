@@ -1,32 +1,30 @@
 #ifndef TEXTURE_PACK_PREVIEW_HPP
 #define TEXTURE_PACK_PREVIEW_HPP
 
-class TexturePackPreview;
-
-TexturePackPreview * SELECTED_TEXTURE_PACK = NULL;
-
 class TexturePackPreview : public Object
 {
 public:
-	unsigned int index;
-	static unsigned int selectedIndex;
-
 	sf::RectangleShape closeButton;
 	sf::Text closeButtonText;
 	
 	sf::Text title;
  
+	std::string PATH = "";
+ 
 	std::vector<Tile> tiles;
 	unsigned int tile_size = 64;
 	int margin = 2;
 	int textMargin = 10;
-	
-	bool isSelected = false;
-	std::string ID = "";
+
+	Tile * selectedTile = NULL;
 
 	sf::Texture * texture = new sf::Texture();
 
-	TexturePackPreview(unsigned int index, sf::Vector2f size, sf::Vector2f pos, std::string PATH) : index(index), closeButtonText("x", *FONT, FONT_SIZE), title(PATH, *FONT, FONT_SIZE), ID(PATH), Object(size)
+	TexturePackPreview(sf::Vector2f size, sf::Vector2f pos, std::string PATH) : 
+		Object(size),
+		closeButtonText("x", *FONT, FONT_SIZE), 
+		title(PATH, *FONT, FONT_SIZE), 
+		PATH(PATH)
 	{
 		closeButton.setPosition(sf::Vector2f(pos.x+textMargin/2, pos.y+textMargin/2));
 		closeButton.setSize(sf::Vector2f(FONT_SIZE, FONT_SIZE));
@@ -59,14 +57,25 @@ public:
 			{
 				sf::Vector2f texturePos( x*tile_size, y*tile_size );
 
-				Tile tile(sf::Vector2f(tile_size, tile_size), sf::Vector2f(pos.x + texturePos.x + margin*x, pos.y + texturePos.y + margin*y));
+				Tile tile(
+					sf::Vector2f(tile_size, tile_size), 
+					sf::Vector2f(pos.x + texturePos.x + margin*x, pos.y + texturePos.y + margin*y),
+					x + (y*texturePackTileNum.x), // index
+					x + (y*texturePackTileNum.x), // indexInTexturePack
+					this						  // texturePack
+				);
+
+//				tile.index = x + (y*texturePackTileNum.x);
+//				tile.indexInTexturePack = x + (y*texturePackTileNum.x);
+//				tile.texturePack = this;
+
 				tile.setTexture(texture);
-				tile.index = x + (y*texturePackTileNum.x);
-				tile.ID = PATH;
 				tile.setTextureRect(sf::IntRect(texturePos.x, texturePos.y, tile_size, tile_size));
+
 				tile.setOutlineThickness(1);
 				tile.setOutlineColor(sf::Color(0, 0, 0, 150));
 				tile.hoverColor = sf::Color::Black;
+
 				tiles.push_back(tile);
 			}
 		}
@@ -109,60 +118,7 @@ public:
 	
 	void update()
 	{		
-		if(tiles.size())
-		{
-			for(Tile & tile : tiles)
-			{
-				if(tile.isVisible)
-				{
-					if(Collision::AABB(*CURSOR, tile) && (sf::Mouse::isButtonPressed(sf::Mouse::Left)))
-					{
-						if(sf::Mouse::isButtonPressed(sf::Mouse::Left))
-						{
-							CURSOR->setMode(CursorMode::Paint);
-							if(SELECTED_TEXTURE_PACK)
-							{
-								CURSOR->setBody(SELECTED_TEXTURE_PACK->tiles[Tile::selectedIndex]);
-								SELECTED_TEXTURE_PACK->isSelected = true;
-							}
-						}
-					}
-					if(Collision::AABB(*CURSOR, tile) || (isSelected && (tile.index == Tile::selectedIndex) && (tile.ID == Tile::selectedID)) )
-					{
-						tile.hoverBox.setFillColor(sf::Color(tile.hoverColor.r, tile.hoverColor.g, tile.hoverColor.b, tile.transparency));						
-						if( (tile.index != Tile::selectedIndex) || (index != TexturePackPreview::selectedIndex) )
-						{
-							if(CURSOR->isPressed())
-							{
-								TexturePackPreview::selectedIndex = index;
-								Tile::selectedIndex = tile.index;
-								Tile::selectedID = tile.ID;
-
-								sf::Vector2u ts = texture->getSize();
-								int x = index % (ts.x / tile_size);
-								int y = index / (ts.x / tile_size);
-
-								CURSOR->setBody(tile);
-
-								printf("Texture_index: %d ; Tile_index: %d\n", TexturePackPreview::selectedIndex, Tile::selectedIndex);
-							}
-						}
-					}
-					else
-					{
-						tile.hoverBox.setFillColor(sf::Color::Transparent);
-					}
-					if((tile.index == Tile::selectedIndex) && (tile.ID == Tile::selectedID))
-					{
-						tile.hoverBox.setFillColor(sf::Color(tile.hoverColor.r, tile.hoverColor.g, tile.hoverColor.b, tile.transparency));
-					}
-					else
-					{
-						tile.setOutlineColor(sf::Color::Black);						
-					}
-				}
-			}
-		}
+	
 	}
 	
 	void render(sf::RenderWindow & window)
@@ -180,7 +136,5 @@ public:
 		}
 	}
 };
-
-unsigned int TexturePackPreview::selectedIndex = 999;
 
 #endif // TEXTURE_PACK_PREVIEW_HPP

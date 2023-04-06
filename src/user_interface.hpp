@@ -58,6 +58,10 @@ public:
 		options.push_back(option);
 	}
 
+	bool isOpen()
+	{
+		return isVisible;
+	}
 	
 	void open()
 	{
@@ -238,7 +242,7 @@ private:
 		uiElements.push_back(clickTile = Option("Click", [&]()
 			{
 				CURSOR->setMode(CursorMode::Default);
-				CURRENT_CONTEXT->editorGrid.isSelected = true;
+//				CURRENT_CONTEXT->editorGrid.isSelected = true;
 			}, 
 			sf::Vector2f(op.x - opoff, op.y + opoff*++y), true, buttonColor )
 		);
@@ -246,11 +250,11 @@ private:
 		uiElements.push_back(paintTile = Option("Paint", [&]()
 			{
 				CURSOR->setMode(CursorMode::Paint);
-				if(SELECTED_TEXTURE_PACK)
+				if(CURRENT_CONTEXT->toolbar_textures.selectedTexturePreview)
 				{
-					CURSOR->setBody(SELECTED_TEXTURE_PACK->tiles[Tile::selectedIndex]);
-					SELECTED_TEXTURE_PACK->isSelected = true;
-					CURRENT_CONTEXT->editorGrid.isSelected = false;
+					CURSOR->setBody(*CURRENT_CONTEXT->toolbar_textures.selectedTexturePreview->selectedTile);
+//					CURRENT_CONTEXT->toolbar_textures.selectedTexturePreview->isSelected = true;
+//					CURRENT_CONTEXT->editorGrid.isSelected = false;
 				}
 			}, 
 			sf::Vector2f(op.x - opoff, op.y + opoff*++y), true, buttonColor )
@@ -259,7 +263,7 @@ private:
 		uiElements.push_back(eraseTile = Option("Erase", [&]()
 		{
 			CURSOR->setMode(CursorMode::Delete);
-			CURRENT_CONTEXT->editorGrid.isSelected = false;
+//			CURRENT_CONTEXT->editorGrid.isSelected = false;
 		}, sf::Vector2f(op.x - opoff, op.y + opoff*++y), true, buttonColor ));
 		
 	}
@@ -290,32 +294,14 @@ private:
 		toolbar_top.dropdownMenus[ToolBar_top::DropDownMenus::File].addOption("New...", [&]()
 		{
 			printf("New!\n");
-
 			newProjectPanel.open();
-			
-/*
-			Context * currentContext = new Context(sf::Vector2f(0, toolbar_tab.getPosition().y + toolbar_tab.getSize().y + toolbar_tab.getOutlineThickness()*2));
-			contextList.push_back(currentContext);			
-			CURRENT_CONTEXT = currentContext;			
-			TOOLBAR_TEXTURES = &currentContext->toolbar_textures;
-			
-			std::string tabName = "Unsaved " + std::to_string(toolbar_tab.tabs.size());
-			
-			toolbar_tab.addOption(tabName, currentContext);
-			toolbar_tab.selectedIndex = toolbar_tab.tabs.size()-1;
-			for(Tab & tab : toolbar_tab.tabs)
-			{
-				tab.deselect();
-			}
-			toolbar_tab.tabs[toolbar_tab.tabs.size()-1].select();
-*/			
 		});
 		
 		// open saved map item for editor to use
 		toolbar_top.dropdownMenus[ToolBar_top::DropDownMenus::File].addOption("Open...", [&]()
 		{
 			printf("Open!\n");
-			FILE_EXPLORER->open();
+			fileExplorer.open();
 		});
 		
 		toolbar_top.dropdownMenus[ToolBar_top::DropDownMenus::File].addOption("----------------", [](){}, false);
@@ -364,7 +350,7 @@ private:
 
 				Context * currentContext = new Context(sf::Vector2f(0, toolbar_tab.getPosition().y + toolbar_tab.getSize().y + toolbar_tab.getOutlineThickness()*2));
 				contextList.push_back(currentContext);			
-				CURRENT_CONTEXT = currentContext;			
+				CURRENT_CONTEXT = currentContext;
 				TOOLBAR_TEXTURES = &currentContext->toolbar_textures;
 				
 				std::string tabName = "Unsaved " + std::to_string(toolbar_tab.tabs.size());
@@ -406,12 +392,15 @@ public:
 
 	NewProjectPanel newProjectPanel;
 
+	FileExplorer fileExplorer;
+
 	std::vector<Context *> contextList;
 
 	UserInterface(int width, int height) : 
 		sf::RectangleShape(sf::Vector2f(width, height)),
 		toolbar_top(sf::Vector2f(width, toolbar_top_height)),
-		toolbar_tab(sf::Vector2f(width, toolbar_tab_height), sf::Vector2f(0, toolbar_top.getSize().y), &contextList)
+		toolbar_tab(sf::Vector2f(width, toolbar_tab_height), sf::Vector2f(0, toolbar_top.getSize().y), &contextList),
+		fileExplorer(sf::Vector2f(width*WINDOW_SIZE_MULTIPLIER, height*WINDOW_SIZE_MULTIPLIER), sf::Vector2f((width-width*WINDOW_SIZE_MULTIPLIER)/2, (height-height*WINDOW_SIZE_MULTIPLIER)/2))	
 	{
 	
 		CURRENT_CONTEXT = new Context(sf::Vector2f(0, toolbar_tab.getPosition().y + toolbar_tab.getSize().y + toolbar_tab.getOutlineThickness()*2));
@@ -459,14 +448,23 @@ public:
 	
 	void update()
 	{
-		toolbar_top.update();
-		toolbar_tab.update();
+		if(fileExplorer.isOpen())
+		{
+			fileExplorer.update();
+		}
+		else if(newProjectPanel.isOpen())
+		{
+			newProjectPanel.update();
+		}
+		else
+		{
+			toolbar_top.update();
+			toolbar_tab.update();
 
-		for(Option & option : uiElements) option.update();
-		
-		if(CURRENT_CONTEXT != nullptr) CURRENT_CONTEXT->update();
-		
-		newProjectPanel.update();
+			for(Option & option : uiElements) option.update();
+			
+			if(CURRENT_CONTEXT != nullptr) CURRENT_CONTEXT->update();			
+		}
 	}
 	
 	std::vector<Object *> getObjects()
@@ -511,7 +509,14 @@ public:
 		toolbar_tab.render(window);
 		toolbar_top.render(window);
 		
-		newProjectPanel.render(window);
+		if(fileExplorer.isOpen())
+		{
+			fileExplorer.render(window);
+		}
+		if(newProjectPanel.isOpen())
+		{
+			newProjectPanel.render(window);
+		}
 	}
 };
 

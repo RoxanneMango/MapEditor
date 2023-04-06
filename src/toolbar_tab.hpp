@@ -80,6 +80,30 @@ public:
 		closeButton.text.setFillColor(sf::Color::White);		
 		
 		closeButton.hoverColor = sf::Color(180, 185, 200);
+		CURSOR->setMode(CursorMode::Default);
+		
+//		context->toolbar_textures
+		
+//		if(SELECTED_TEXTURE_PACK)
+//		{
+//			Tile::selectedIndex = 0;
+//			Tile::selectedID = "";
+//			SELECTED_TEXTURE_PACK->selectedIndex = false;
+//			SELECTED_TEXTURE_PACK->isSelected = false;
+//			SELECTED_TEXTURE_PACK = NULL;
+//		}
+//		if(CURRENT_CONTEXT)
+//		{
+//			CURRENT_CONTEXT->editorGrid.isSelected = false;
+//			if(CURRENT_CONTEXT->toolbar_textures.selectedTexturePreview);
+//				CURRENT_CONTEXT->toolbar_textures.selectedTexturePreview = NULL;
+//		}
+		
+		
+//		SELECTED_TEXTURE_PACK = NULL;
+//		SELECTED_TEXTURE_PACK->isSelected = false;
+//		Tile::selectedIndex = 999;
+//		Tile::selectedID = "";
 	}
 	
 	void deselect()
@@ -121,6 +145,8 @@ private:
 	
 public:
 	int selectedIndex = -1;
+	
+	Tab * selectedTab = NULL;
 	std::vector<Tab> tabs;
 
 	ToolBar_tab()
@@ -170,19 +196,22 @@ public:
 			selectedIndex = -1;
 			int yeetIndex = -1;
 			bool wasSelected = false;
-			for(unsigned int i = 0; i < tabs.size(); i++)
+			if(WINDOW->hasFocus())
 			{
-				if(Collision::AABB(*CURSOR, tabs[i].closeButton) && CURSOR->isPressed())
+				for(unsigned int i = 0; i < tabs.size(); i++)
 				{
-					yeetIndex = i;
-					wasSelected = tabs[i].isSelected;
-					break;
-				}
-				if(Collision::AABB(*CURSOR, tabs[i]) && CURSOR->isPressed())
-				{
-					selectedIndex = i;
-					CURRENT_CONTEXT = tabs[i].context;
-					break;
+					if(Collision::AABB(*CURSOR, tabs[i].closeButton) && CURSOR->isPressed())
+					{
+						yeetIndex = i;
+						wasSelected = tabs[i].isSelected;
+						break;
+					}
+					if(Collision::AABB(*CURSOR, tabs[i]) && CURSOR->isPressed())
+					{
+						selectedIndex = i;
+						CURRENT_CONTEXT = tabs[i].context;
+						break;
+					}
 				}
 			}
 			if(yeetIndex >= 0)

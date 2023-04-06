@@ -15,6 +15,7 @@ class ToolBar_textures : public Object
 	float texturesHeight = margin.y;
 	
 public:
+	TexturePackPreview * selectedTexturePreview;
 	std::vector<TexturePackPreview> texturePreviews;
 
 	ScrollWheel_vertical scrollWheel;
@@ -31,6 +32,7 @@ public:
 		textureSize = sf::Vector2f(size.x - margin.x, size.x - margin.y);
 		addTexturePreview("../assets/texturepack.png");
 		addTexturePreview("../assets/pumpkin.png");
+		
 	}
 	
 	void alignPreviews()
@@ -48,39 +50,82 @@ public:
 	void update()
 	{
 		scrollWheel.update();
+/*
+		if(sf::Mouse::isButtonPressed(sf::Mouse::Left))
+		{
+			if(selectedTexturePreview)
+			{
+				selectedTexturePreview->selectedTile = NULL;
+				selectedTexturePreview = NULL;
+			}
+		}
+*/
+		
 		if(texturePreviews.size())
 		{
-			for(unsigned int i = 0; i < texturePreviews.size(); i++)
+			unsigned int i = 0;
+			for(TexturePackPreview & preview : texturePreviews)
 			{
-				if(scrollWheel.isSelected)
+				// if the scroll wheel is selected, make it so the previews follow the cursors y-position
+				if(WINDOW->hasFocus() && scrollWheel.isSelected) alignPreviews();
+
+				if(Collision::AABB(*CURSOR, preview.closeButton))
 				{
-					alignPreviews();
-				}
-				
-				if(Collision::AABB(*CURSOR, texturePreviews[i]) && CURSOR->isClicked)
-				{
-//					printf("texturePackPreview selected\n");
-					texturePreviews[i].isSelected = true;
-					SELECTED_TEXTURE_PACK = &texturePreviews[i];
-				}
-				else
-				{
-					texturePreviews[i].isSelected = false;
-				}
-				
-				if(Collision::AABB(*CURSOR, texturePreviews[i].closeButton))
-				{
-					if(CURSOR->isPressed())
+					if(WINDOW->hasFocus() && CURSOR->isPressed())
 					{
 						texturePreviews.erase(texturePreviews.begin() + i);
-						SELECTED_TEXTURE_PACK = NULL;
+						selectedTexturePreview = NULL;
 
 						alignPreviews();
-
 						break;
 					}
+				}				
+				
+				
+				// go through all its tiles, if there are any
+				if(preview.tiles.size())
+				{
+					for(Tile & tile : preview.tiles)
+					{
+						// if the cursor is on top of a tile...
+						if(Collision::AABB(*CURSOR, tile))
+						{
+							// make the hoverbox of that tile darker
+							tile.hoverBox.setFillColor(sf::Color(
+								tile.hoverColor.r, 
+								tile.hoverColor.g, 
+								tile.hoverColor.b, 
+								tile.transparency)
+							);
+							
+							// if a tile is clicked ...
+							if(WINDOW->hasFocus() && sf::Mouse::isButtonPressed(sf::Mouse::Left))
+							{
+								selectedTexturePreview = &preview;		// set this preview to be the selected preview
+								preview.selectedTile = &tile;			// set this tile to be the selected tile
+								
+								CURSOR->setMode(CursorMode::Paint);		// set cursor to painting mode
+								CURSOR->setBody(tile);					// set cursor body to this tile texture
+							}
+						}	// if the tile is selected
+						else if((&preview == selectedTexturePreview) && (&tile == preview.selectedTile))
+						{
+							// make the hoverbox of that tile darker
+							tile.hoverBox.setFillColor(sf::Color(
+								tile.hoverColor.r, 
+								tile.hoverColor.g, 
+								tile.hoverColor.b, 
+								tile.transparency)
+							);
+						}
+						else
+						{
+							tile.hoverBox.setFillColor(sf::Color::Transparent);
+						}
+					}
 				}
-				texturePreviews[i].update();
+				
+				i++;
 			}
 		}
 	}
@@ -88,7 +133,7 @@ public:
 	int addTexturePreview(std::string PATH)
 	{
 		sf::Vector2f position(sf::Vector2f(getPosition().x + margin.x/2, getPosition().y + texturesHeight));
-		TexturePackPreview tpp(texturePreviews.size(), textureSize, position, PATH);
+		TexturePackPreview tpp(textureSize, position, PATH);
 
 		if(tpp.tiles.size())
 		{

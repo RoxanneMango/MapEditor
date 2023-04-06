@@ -9,21 +9,17 @@
 class EditorGrid : public Object
 {
 public:
-
-	std::vector<Tile> tiles;
-	unsigned int tile_size = 64;
 	int margin = 2;
 	int textMargin = 10;
-	
-	int selectedIndex = -1;
-	bool isSelected = false;
-	std::string ID = "";
-
-	sf::Vector2u gridSize = sf::Vector2u(40, 40);
+	unsigned int tile_size = 64;
 
 	sf::Texture * texture = new sf::Texture();
+	sf::Vector2u gridSize = sf::Vector2u(40, 40);
 
-	EditorGrid(sf::Vector2f size, sf::Vector2f pos, std::string PATH) : ID(PATH), Object(size)
+	Tile * selectedTile = NULL;
+	std::vector<Tile> tiles;
+
+	EditorGrid(sf::Vector2f size, sf::Vector2f pos) : Object(size) 
 	{
 		setPosition(pos);
 		setSize(size);
@@ -34,22 +30,25 @@ public:
 		
 		// number of tiles in the texturePack
 		sf::Vector2u texturePackTileNum = gridSize;
-	//	sf::Vector2u texturePackTileNum = sf::Vector2u(texture->getSize().x / tile_size, texture->getSize().y / tile_size);
 		
 		for(unsigned int y = 0; y < texturePackTileNum.y; y++)
 		{
 			for(unsigned int x = 0; x < texturePackTileNum.x; x++)
-			{
+			{				
 				sf::Vector2f texturePos( x*tile_size, y*tile_size );
 
-				Tile tile(sf::Vector2f(tile_size, tile_size), sf::Vector2f(pos.x + texturePos.x + margin*x, pos.y + texturePos.y + margin*y));
-
-				tile.index = x + (y*texturePackTileNum.x);
-				tile.ID = PATH;
+				Tile tile(
+					sf::Vector2f(tile_size, tile_size), 
+					sf::Vector2f(pos.x + texturePos.x + margin*x, pos.y + texturePos.y + margin*y),
+					(y*texturePackTileNum.x) + x // index
+				);
 
 				sf::Color color = tile.getFillColor();
 				color.a = 0;
 				tile.setFillColor(color);
+
+//				tile.index = (y*texturePackTileNum.x) + x;
+//				tile.indexInGrid = (y * texturePackTileNum.x) + x;
 
 				tile.hoverBox.setOutlineColor(sf::Color(0,0,0,200));
 				tile.hoverColor = sf::Color::Black;
@@ -109,85 +108,8 @@ public:
 	}
 	
 	void update()
-	{		
-		if(tiles.size())
-		{
-			int tileIndex = 0;
-			for(Tile & tile : tiles)
-			{
-				if(tile.isVisible)
-				{
-					if(Collision::AABB(*CURSOR, tile) && Collision::AABB(*CURSOR, *this))// || (tile.index == selectedIndex) )
-					{
-						tile.hoverBox.setFillColor(sf::Color(tile.hoverColor.r, tile.hoverColor.g, tile.hoverColor.b, tile.transparency));						
+	{
 
-						if(CURSOR->cursorMode == CursorMode::Default)
-						{
-							if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
-							{
-								selectedIndex = tileIndex;
-								isSelected = true;
-							}
-						}
-						else
-						{
-							isSelected = false;
-							selectedIndex = -1;
-						}
-						if(CURSOR->cursorMode == CursorMode::Paint)
-						{
-							if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && SELECTED_TEXTURE_PACK)
-							{
-								tile.setTexture(SELECTED_TEXTURE_PACK->tiles[Tile::selectedIndex].getTexture());
-								tile.setTextureRect(SELECTED_TEXTURE_PACK->tiles[Tile::selectedIndex].getTextureRect());
-
-								tile.index = Tile::selectedIndex;
-								tile.ID = Tile::selectedID;
-
-								sf::Color color = tile.getFillColor();
-								color.a = 255;
-								tile.setFillColor(color);
-
-								selectedIndex = tile.index;								
-							}
-						}
-						else if(CURSOR->cursorMode == CursorMode::Delete)
-						{
-							if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && SELECTED_TEXTURE_PACK)
-							{
-								tile.setTexture(NULL);
-								tile.setTextureRect(sf::IntRect(0,0,0,0));
-
-					//			tile.index = Tile::selectedIndex;
-								tile.ID = "";
-
-								sf::Color color = tile.getFillColor();
-								color.a = 0;
-								tile.setFillColor(color);
-							}							
-						}
-					}
-					else if(isSelected && (selectedIndex == tileIndex))
-					{
-						tile.hoverBox.setFillColor(sf::Color(tile.hoverColor.r, tile.hoverColor.g, tile.hoverColor.b, 60));
-					}
-					else
-					{
-						tile.hoverBox.setFillColor(sf::Color::Transparent);
-					}
-
-//					if((selectedIndex == tile.index)
-//					{
-//						tile.hoverBox.setFillColor(sf::Color(tile.hoverColor.r, tile.hoverColor.g, tile.hoverColor.b, tile.transparency));
-//					}
-//					else
-//					{
-//						tile.setOutlineColor(sf::Color::Black);
-//					}
-				}
-				tileIndex++;
-			}
-		}
 	}
 	
 	void render(sf::RenderWindow & window)
