@@ -4,6 +4,7 @@
 #include "editor_grid.hpp"
 #include "option.hpp"
 #include "line.hpp"
+#include "tile.hpp"
 
 class Layer : public EditorGrid
 {
@@ -26,9 +27,7 @@ public:
 		option(option),
 		line(sf::Vector2f(option.getPosition().x, option.getPosition().y + option.getSize().y), option.getSize().x),
 		name(name)
-	{
-		
-	}
+	{ }
 	
 	void update()
 	{
@@ -73,9 +72,7 @@ public:
 	}
 
 	~LayerMenu()
-	{
-		
-	}
+	{ }
 
 	void alignLayerLabels()
 	{
@@ -108,8 +105,8 @@ public:
 		}
 		layer.option.isSelected = true;
 
-		selectedLayer = &layer;
-	
+		selectedLayer = &layer;	
+		
 		// Enable and resize the scrollbar once there are enough elements to warrant scrolling
 //		sf::Vector2f wheelieSize = sf::Vector2f();
 		scrollWheel.wheeliePiece.setSize(sf::Vector2f(scrollWheel.wheeliePiece.getSize().x, scrollWheel.getSize().y / layers.size()));

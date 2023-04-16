@@ -2,6 +2,7 @@
 #define TILE_HPP
 
 #include <SFML/Graphics.hpp>
+#include "object.hpp"
 
 class Tile : public Object
 {
@@ -46,12 +47,6 @@ public:
 		window.draw(*this);
 		window.draw(hoverBox);
 	}
-	
-//	operator == (const Tile & t)
-//	{
-//		return true;
-//		return ( (texturePack == t.texturePack) && (indexInTexturePack == t.indexInTexturePack) && (index == t.index) );
-//	}
 	
 };
 

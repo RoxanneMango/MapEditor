@@ -2,6 +2,7 @@
 #define EDITOR_GRID_HPP
 
 #include "object.hpp"
+#include "tile.hpp"
 #include "cursor.hpp"
 
 #include <SFML/Graphics.hpp>
@@ -14,14 +15,14 @@ public:
 	unsigned int tile_size = 64;
 
 	sf::Texture * texture = new sf::Texture();
-	sf::Vector2u gridSize = sf::Vector2u(40, 40);
+	sf::Vector2u gridSize = sf::Vector2u(8, 8);
 
 	Tile * selectedTile = NULL;
 	std::vector<Tile> tiles;
 
 	bool drawBackPanel = false;
 
-	EditorGrid(sf::Vector2f size, sf::Vector2f pos, sf::Color gridColor = sf::Color::Black) : Object(size) 
+	EditorGrid(sf::Vector2f size, sf::Vector2f pos, sf::Color gridColor = sf::Color::Black)
 	{		
 		setPosition(pos);
 		setSize(size);

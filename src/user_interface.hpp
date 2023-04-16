@@ -320,6 +320,7 @@ private:
 						sf::Vector2f(CURRENT_CONTEXT->getPosition().x + 600, CURRENT_CONTEXT->getPosition().y + 10), 
 						"Layer_" + std::to_string(CURRENT_CONTEXT->layerMenu.layers.size())
 					);
+					moveReset.action();
 				}
 			}, 
 			sf::Vector2f(op.x, op.y + marginY * i), true, buttonColor)
@@ -334,6 +335,7 @@ private:
 						if(&layer == CURRENT_CONTEXT->layerMenu.selectedLayer)
 						{
 							CURRENT_CONTEXT->layerMenu.layers.erase(CURRENT_CONTEXT->layerMenu.layers.begin() + i+1);
+							CURRENT_CONTEXT->layerMenu.alignLayerLabels();
 							break;
 						}
 						i++;
