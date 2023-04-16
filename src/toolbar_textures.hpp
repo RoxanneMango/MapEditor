@@ -31,7 +31,7 @@ public:
 		
 		textureSize = sf::Vector2f(size.x - margin.x, size.x - margin.y);
 		addTexturePreview("../assets/texturepack.png");
-		addTexturePreview("../assets/pumpkin.png");
+//		addTexturePreview("../assets/pumpkin.png");
 		
 	}
 	
@@ -49,85 +49,7 @@ public:
 	
 	void update()
 	{
-		scrollWheel.update();
-/*
-		if(sf::Mouse::isButtonPressed(sf::Mouse::Left))
-		{
-			if(selectedTexturePreview)
-			{
-				selectedTexturePreview->selectedTile = NULL;
-				selectedTexturePreview = NULL;
-			}
-		}
-*/
 		
-		if(texturePreviews.size())
-		{
-			unsigned int i = 0;
-			for(TexturePackPreview & preview : texturePreviews)
-			{
-				// if the scroll wheel is selected, make it so the previews follow the cursors y-position
-				if(WINDOW->hasFocus() && scrollWheel.isSelected) alignPreviews();
-
-				if(Collision::AABB(*CURSOR, preview.closeButton))
-				{
-					if(WINDOW->hasFocus() && CURSOR->isPressed())
-					{
-						texturePreviews.erase(texturePreviews.begin() + i);
-						selectedTexturePreview = NULL;
-
-						alignPreviews();
-						break;
-					}
-				}				
-				
-				
-				// go through all its tiles, if there are any
-				if(preview.tiles.size())
-				{
-					for(Tile & tile : preview.tiles)
-					{
-						// if the cursor is on top of a tile...
-						if(Collision::AABB(*CURSOR, tile))
-						{
-							// make the hoverbox of that tile darker
-							tile.hoverBox.setFillColor(sf::Color(
-								tile.hoverColor.r, 
-								tile.hoverColor.g, 
-								tile.hoverColor.b, 
-								tile.transparency)
-							);
-							
-							// if a tile is clicked ...
-							if(WINDOW->hasFocus() && sf::Mouse::isButtonPressed(sf::Mouse::Left))
-							{
-								selectedTexturePreview = &preview;		// set this preview to be the selected preview
-								preview.selectedTile = &tile;			// set this tile to be the selected tile
-								
-								CURSOR->setMode(CursorMode::Paint);		// set cursor to painting mode
-								CURSOR->setBody(tile);					// set cursor body to this tile texture
-							}
-						}	// if the tile is selected
-						else if((&preview == selectedTexturePreview) && (&tile == preview.selectedTile))
-						{
-							// make the hoverbox of that tile darker
-							tile.hoverBox.setFillColor(sf::Color(
-								tile.hoverColor.r, 
-								tile.hoverColor.g, 
-								tile.hoverColor.b, 
-								tile.transparency)
-							);
-						}
-						else
-						{
-							tile.hoverBox.setFillColor(sf::Color::Transparent);
-						}
-					}
-				}
-				
-				i++;
-			}
-		}
 	}
 	
 	int addTexturePreview(std::string PATH)

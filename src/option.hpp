@@ -15,6 +15,7 @@ protected:
 	sf::RectangleShape hoverBox;
 public:
 	bool isVisible = true;
+	bool isSelected = false;
 	uint8_t transparency = 128;
 	sf::Color hoverColor = sf::Color(220, 225, 230);
 
@@ -47,7 +48,20 @@ public:
 		hoverBox.setSize(size);
 		
 	}
-		
+	
+	void changePosition(sf::Vector2f pos)
+	{
+		setPosition(sf::Vector2f(pos.x - 5, pos.y));
+		hoverBox.setPosition(getPosition());
+		text.setPosition(pos);
+	}
+	
+	void changeSize(sf::Vector2f size)
+	{		
+		setSize(size);
+		hoverBox.setSize(size);		
+	}
+	
 	void doAction()
 	{
 		hoverBox.setFillColor(sf::Color(hoverColor.r, hoverColor.g, hoverColor.b, transparency));
@@ -65,6 +79,10 @@ public:
 				{
 					doAction();
 				}
+			}
+			else if(isSelected)
+			{
+				hoverBox.setFillColor(sf::Color(hoverColor.r, hoverColor.g, hoverColor.b, transparency));				
 			}
 			else
 			{

@@ -62,7 +62,7 @@ public:
 					sf::Vector2f(pos.x + texturePos.x + margin*x, pos.y + texturePos.y + margin*y),
 					x + (y*texturePackTileNum.x), // index
 					x + (y*texturePackTileNum.x), // indexInTexturePack
-					this						  // texturePack
+					PATH						  // texturePack
 				);
 
 //				tile.index = x + (y*texturePackTileNum.x);

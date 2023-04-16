@@ -24,6 +24,7 @@ class Cursor : public sf::RectangleShape
 public:
 
 	CursorMode cursorMode = CursorMode::Default;
+	bool isBodyVisible = true;
 	bool isClicked = false;
 	
 	Cursor() : sf::RectangleShape(sf::Vector2f(1, 1)), body(sf::Vector2f(TILE_SIZE, TILE_SIZE))
@@ -55,7 +56,7 @@ public:
 	void render(sf::RenderWindow & window)
 	{
 		window.draw(*this);
-		if(body.getTexture() != NULL) window.draw(body);
+		if(isBodyVisible && body.getTexture() != NULL) window.draw(body);
 	}
 	
 	void setMode(CursorMode mode)

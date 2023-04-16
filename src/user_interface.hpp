@@ -7,121 +7,10 @@
 #include "toolbar_top.hpp"
 #include "toolbar_tab.hpp"
 #include "toolbar_textures.hpp"
-#include "editor_grid.hpp"
-
+#include "layer_menu.hpp"
 #include "cursor.hpp"
-
 #include "context.hpp"
-
-class NewProjectPanel : public sf::RectangleShape
-{
-private:
-	sf::Text window_title = sf::Text("> Create New Project", *FONT, FONT_SIZE);
-	sf::Text closeButton_x = sf::Text("X", *FONT, FONT_SIZE);
-	sf::RectangleShape closeButton;
-	sf::Line topDivider;
-public:
-	std::vector<Option> options;
-
-	bool isVisible = true;
-
-	NewProjectPanel() : sf::RectangleShape(sf::Vector2f(1000, 700))
-	{
-		sf::Color color = sf::Color(230, 230, 230);
-		setFillColor(color);
-		setOutlineThickness(2);
-		setOutlineColor(sf::Color::Black);
-		setPosition(sf::Vector2f(WINDOW->getSize().x/2 - getSize().x/2, WINDOW->getSize().y/2 - getSize().y/2));
-
-		window_title.setFillColor(sf::Color::Black);
-		window_title.setPosition(sf::Vector2f(getPosition().x + 10, getPosition().y + 10));
-		
-		closeButton.setFillColor(sf::Color(200, 80, 80));
-		closeButton.setOutlineThickness(2);
-		closeButton.setOutlineColor(sf::Color::Black);
-		closeButton.setSize(sf::Vector2f(30, 30));
-		closeButton.setPosition(sf::Vector2f(getPosition().x + getSize().x - closeButton.getSize().x - 5, getPosition().y + 5));
-		
-		closeButton_x.setFillColor(sf::Color::White);
-		closeButton_x.setPosition(sf::Vector2f(closeButton.getPosition().x + 10, closeButton.getPosition().y + 3));
-
-		topDivider = sf::Line(sf::Vector2f(getPosition().x, getPosition().y + closeButton.getSize().y + 10), getSize().x, 1);		
-		
-	}
-
-	void addOption(std::string label, sf::Vector2f pos, std::function<void()> func, bool highLightOnHover = true)
-	{
-		Option option(label, func, pos, highLightOnHover, sf::Color(200, 200, 200));
-		option.setOutlineThickness(2);
-		option.setOutlineColor(sf::Color::Black);
-		
-		options.push_back(option);
-	}
-
-	bool isOpen()
-	{
-		return isVisible;
-	}
-	
-	void open()
-	{
-		isVisible = true;
-	}
-	
-	void close()
-	{
-		isVisible = false;
-	}	
-	
-	void update()
-	{
-		try
-		{
-			if(isVisible)
-			{
-				if(Collision::AABB(*CURSOR, closeButton))
-				{
-					if(CURSOR->isPressed())
-					{
-						close();
-					}
-					closeButton.setFillColor(sf::Color(255, 80, 80));
-				}
-				else
-				{
-					closeButton.setFillColor(sf::Color(200, 80, 80));
-				}
-				
-				for(Option & option : options)
-				{
-					option.update();
-				}
-			}
-		}
-		catch(...)
-		{
-			printf("Something went wrong while creating new project!\n");
-		}	
-	}
-	
-	void render(sf::RenderWindow & window)
-	{
-		if(isVisible)
-		{
-			window.draw(*this);
-			window.draw(window_title);
-			window.draw(closeButton);
-			window.draw(topDivider);
-			window.draw(window_title);
-			window.draw(closeButton_x);
-
-			for(Option & option : options)
-			{
-				option.render(window);
-			}			
-		}		
-	}
-};
+#include "new_project_panel.hpp"
 
 class UserInterface : public sf::RectangleShape
 {
@@ -132,6 +21,9 @@ private:
 	sf::RectangleShape foreground;
 	sf::Image foregroundImage;
 	sf::Texture foregroundTexture;
+
+	std::string savePATH = "../saves/";
+	std::string saveFileExtension = ".map";
 
 	void createFloatRectMask(sf::RectangleShape & shape)
 	{
@@ -168,15 +60,19 @@ private:
 		sf::Color buttonColor = sf::Color(180, 180, 180);
 		
 		if(CURRENT_CONTEXT == nullptr) return;
-		
-		sf::Vector2f op = sf::Vector2f(CURRENT_CONTEXT->editorGrid.getPosition().x + CURRENT_CONTEXT->editorGrid.getSize().x + opoff + margin, CURRENT_CONTEXT->editorGrid.getPosition().y + opoff);
+		if(CURRENT_CONTEXT->layerMenu.selectedLayer == nullptr) return;
+
+		sf::Vector2f op = sf::Vector2f(CURRENT_CONTEXT->layerMenu.selectedLayer->getPosition().x + CURRENT_CONTEXT->layerMenu.selectedLayer->getSize().x + opoff + margin, CURRENT_CONTEXT->layerMenu.selectedLayer->getPosition().y + opoff);
 		
 		uiElements.push_back(moveLeft = Option("<", [&]()
 			{
-				if(CURRENT_CONTEXT->editorGrid.tiles.size())
+				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.layers.size())
 				{
-					sf::Vector2f pos = CURRENT_CONTEXT->editorGrid.tiles[0].getPosition();
-					CURRENT_CONTEXT->editorGrid.changePosition(sf::Vector2f(pos.x + CURRENT_CONTEXT->editorGrid.tile_size, pos.y));
+					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					{
+						sf::Vector2f pos = layer.tiles[0].getPosition();
+						layer.changePosition(sf::Vector2f(pos.x + layer.tile_size, pos.y));							
+					}
 				}
 			}, 
 			sf::Vector2f(op.x - opoff, op.y), true, buttonColor)
@@ -184,10 +80,13 @@ private:
 		//
 		uiElements.push_back(moveRight = Option(">", [&]()
 			{
-				if(CURRENT_CONTEXT->editorGrid.tiles.size())
+				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.layers.size())
 				{
-					sf::Vector2f pos = CURRENT_CONTEXT->editorGrid.tiles[0].getPosition();
-					CURRENT_CONTEXT->editorGrid.changePosition(sf::Vector2f(pos.x - CURRENT_CONTEXT->editorGrid.tile_size, pos.y));
+					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					{
+						sf::Vector2f pos = layer.tiles[0].getPosition();
+						layer.changePosition(sf::Vector2f(pos.x - layer.tile_size, pos.y));							
+					}
 				}
 			}, 
 			sf::Vector2f(op.x + opoff, op.y), true, buttonColor )
@@ -195,10 +94,13 @@ private:
 		//
 		uiElements.push_back(moveUp = Option("^", [&]()
 			{
-				if(CURRENT_CONTEXT->editorGrid.tiles.size())
+				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.layers.size())
 				{
-					sf::Vector2f pos = CURRENT_CONTEXT->editorGrid.tiles[0].getPosition();
-					CURRENT_CONTEXT->editorGrid.changePosition(sf::Vector2f(pos.x, pos.y + CURRENT_CONTEXT->editorGrid.tile_size));
+					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					{
+						sf::Vector2f pos = layer.tiles[0].getPosition();
+						layer.changePosition(sf::Vector2f(pos.x, pos.y + layer.tile_size));							
+					}
 				}
 			}, 
 			sf::Vector2f(op.x, op.y - opoff), true, buttonColor )
@@ -206,10 +108,13 @@ private:
 		//
 		uiElements.push_back(moveDown = Option("v", [&]()
 			{
-				if(CURRENT_CONTEXT->editorGrid.tiles.size())
+				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.layers.size())
 				{
-					sf::Vector2f pos = CURRENT_CONTEXT->editorGrid.tiles[0].getPosition();
-					CURRENT_CONTEXT->editorGrid.changePosition(sf::Vector2f(pos.x, pos.y - CURRENT_CONTEXT->editorGrid.tile_size));
+					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					{
+						sf::Vector2f pos = layer.tiles[0].getPosition();
+						layer.changePosition(sf::Vector2f(pos.x, pos.y - layer.tile_size));							
+					}
 				}
 			}, 
 			sf::Vector2f(op.x, op.y + opoff), true, buttonColor )
@@ -217,7 +122,13 @@ private:
 		//
 		uiElements.push_back(moveReset = Option("r", [&]()
 			{
-				CURRENT_CONTEXT->editorGrid.resetGrid();
+				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.layers.size())
+				{
+					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					{
+						layer.resetGrid();
+					}
+				}
 			}, 
 			sf::Vector2f(op.x, op.y), true, buttonColor )
 		);
@@ -227,14 +138,26 @@ private:
 		
 		uiElements.push_back(zoomIn = Option("+", [&]() 
 			{ 
-				CURRENT_CONTEXT->editorGrid.changeScale(0.1); 
+				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.layers.size())
+				{
+					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					{
+						layer.changeScale(0.1);
+					}
+				}
 			}, 
 			sf::Vector2f(op.x - opoff, op.y + opoff * y), true, buttonColor )
 		);
 		//
 		uiElements.push_back(zoomOut = Option("-", [&]()
 			{
-				CURRENT_CONTEXT->editorGrid.changeScale(-0.1);
+				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.layers.size())
+				{
+					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					{
+						layer.changeScale(-0.1);
+					}
+				}
 			}, 
 			sf::Vector2f(op.x, op.y + opoff * y), true, buttonColor )
 		);
@@ -242,7 +165,7 @@ private:
 		uiElements.push_back(clickTile = Option("Click", [&]()
 			{
 				CURSOR->setMode(CursorMode::Default);
-//				CURRENT_CONTEXT->editorGrid.isSelected = true;
+//				CURRENT_CONTEXT->layerMenu.selectedLayer->isSelected = true;
 			}, 
 			sf::Vector2f(op.x - opoff, op.y + opoff*++y), true, buttonColor )
 		);
@@ -250,11 +173,11 @@ private:
 		uiElements.push_back(paintTile = Option("Paint", [&]()
 			{
 				CURSOR->setMode(CursorMode::Paint);
-				if(CURRENT_CONTEXT->toolbar_textures.selectedTexturePreview)
+				if(CURRENT_CONTEXT && CURRENT_CONTEXT->toolbar_textures.selectedTexturePreview)
 				{
 					CURSOR->setBody(*CURRENT_CONTEXT->toolbar_textures.selectedTexturePreview->selectedTile);
 //					CURRENT_CONTEXT->toolbar_textures.selectedTexturePreview->isSelected = true;
-//					CURRENT_CONTEXT->editorGrid.isSelected = false;
+//					CURRENT_CONTEXT->layerMenu.selectedLayer->isSelected = false;
 				}
 			}, 
 			sf::Vector2f(op.x - opoff, op.y + opoff*++y), true, buttonColor )
@@ -263,9 +186,9 @@ private:
 		uiElements.push_back(eraseTile = Option("Erase", [&]()
 		{
 			CURSOR->setMode(CursorMode::Delete);
-//			CURRENT_CONTEXT->editorGrid.isSelected = false;
+//			CURRENT_CONTEXT->layerMenu.selectedLayer->isSelected = false;
 		}, sf::Vector2f(op.x - opoff, op.y + opoff*++y), true, buttonColor ));
-		
+
 	}
 
 	void initToolbarTop()
@@ -310,6 +233,10 @@ private:
 		toolbar_top.dropdownMenus[ToolBar_top::DropDownMenus::File].addOption("Save...", [&]()
 		{
 			printf("Save!\n");
+			if(CURRENT_CONTEXT)
+			{
+				CURRENT_CONTEXT->save(savePATH + CURRENT_CONTEXT->mapName + saveFileExtension);
+			}
 		});
 
 		// save map into map save file for map editor to use as ...
@@ -348,14 +275,14 @@ private:
 		newProjectPanel.addOption("Create new Project", pos, [&]()
 			{
 
-				Context * currentContext = new Context(sf::Vector2f(0, toolbar_tab.getPosition().y + toolbar_tab.getSize().y + toolbar_tab.getOutlineThickness()*2));
+				std::string mapName = "Unsaved " + std::to_string(toolbar_tab.tabs.size());
+
+				Context * currentContext = new Context(mapName, sf::Vector2f(0, toolbar_tab.getPosition().y + toolbar_tab.getSize().y + toolbar_tab.getOutlineThickness()*2));
 				contextList.push_back(currentContext);			
 				CURRENT_CONTEXT = currentContext;
 				TOOLBAR_TEXTURES = &currentContext->toolbar_textures;
 				
-				std::string tabName = "Unsaved " + std::to_string(toolbar_tab.tabs.size());
-				
-				toolbar_tab.addOption(tabName, currentContext);
+				toolbar_tab.addOption(mapName, currentContext);
 				toolbar_tab.selectedIndex = toolbar_tab.tabs.size()-1;
 				for(Tab & tab : toolbar_tab.tabs)
 				{
@@ -370,8 +297,126 @@ private:
 		);		
 	}
 
+	void initLayerMenu()
+	{
+		// option position
+		int opoff = 90;
+		sf::Color buttonColor = sf::Color(180, 180, 180);
+		
+		if(CURRENT_CONTEXT == nullptr) return;
+		if(CURRENT_CONTEXT->layerMenu.selectedLayer == nullptr) return;
+		
+		sf::Vector2f op = sf::Vector2f(CURRENT_CONTEXT->layerMenu.getPosition().x + CURRENT_CONTEXT->layerMenu.getSize().x + CURRENT_CONTEXT->layerMenu.scrollWheel.getSize().x + 20, CURRENT_CONTEXT->layerMenu.getPosition().y);
+
+		int i = 0;
+		int marginY = 35;
+
+		uiElements.push_back(addLayer = Option("+ NEW ", [&]()
+			{
+				if(CURRENT_CONTEXT)
+				{
+					CURRENT_CONTEXT->layerMenu.addLayer(
+						sf::Vector2f(800, 600),
+						sf::Vector2f(CURRENT_CONTEXT->getPosition().x + 600, CURRENT_CONTEXT->getPosition().y + 10), 
+						"Layer_" + std::to_string(CURRENT_CONTEXT->layerMenu.layers.size())
+					);
+				}
+			}, 
+			sf::Vector2f(op.x, op.y + marginY * i), true, buttonColor)
+		);
+		uiElements.push_back(deleteLayer = Option("- DEL ", [&]()
+			{
+				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.selectedLayer)
+				{
+					int i = -1;
+					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					{
+						if(&layer == CURRENT_CONTEXT->layerMenu.selectedLayer)
+						{
+							CURRENT_CONTEXT->layerMenu.layers.erase(CURRENT_CONTEXT->layerMenu.layers.begin() + i+1);
+							break;
+						}
+						i++;
+					}
+					if(i >= 0)
+					{
+						CURRENT_CONTEXT->layerMenu.selectedLayer = &CURRENT_CONTEXT->layerMenu.layers[i];
+						CURRENT_CONTEXT->layerMenu.selectedLayer->option.isSelected = true;
+					}
+					else
+					{
+						CURRENT_CONTEXT->layerMenu.selectedLayer = NULL;
+					}
+				}
+			}, 
+			sf::Vector2f(op.x + opoff, op.y + marginY * i++), true, buttonColor)
+		);
+		uiElements.push_back(moveUpLayer = Option("^ UP  ", [&]()
+			{
+				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.selectedLayer)
+				{
+					int i = 0;
+					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					{
+						if(&layer == CURRENT_CONTEXT->layerMenu.selectedLayer)
+						{
+							if(i > 0)
+							{
+								Layer layer1 = CURRENT_CONTEXT->layerMenu.layers[i];
+								Layer layer2 = CURRENT_CONTEXT->layerMenu.layers[i-1];
+								
+								CURRENT_CONTEXT->layerMenu.layers[i-1] = layer1;
+								CURRENT_CONTEXT->layerMenu.layers[i] = layer2;
+								
+								CURRENT_CONTEXT->layerMenu.selectedLayer = &CURRENT_CONTEXT->layerMenu.layers[i-1];
+								
+								CURRENT_CONTEXT->layerMenu.alignLayerLabels();
+							}
+							break;
+						}
+						i++;
+					}
+				}
+			}, 
+			sf::Vector2f(op.x, op.y + marginY * i), true, buttonColor)
+		);
+		uiElements.push_back(moveDownLayer = Option("v DOWN", [&]()
+			{
+				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.selectedLayer)
+				{
+					int i = 0;
+					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					{
+						if(&layer == CURRENT_CONTEXT->layerMenu.selectedLayer)
+						{
+							if(i < (CURRENT_CONTEXT->layerMenu.layers.size()-1))
+							{
+								Layer layer1 = CURRENT_CONTEXT->layerMenu.layers[i];
+								Layer layer2 = CURRENT_CONTEXT->layerMenu.layers[i+1];
+								
+								CURRENT_CONTEXT->layerMenu.layers[i+1] = layer1;
+								CURRENT_CONTEXT->layerMenu.layers[i] = layer2;
+
+								CURRENT_CONTEXT->layerMenu.selectedLayer = &CURRENT_CONTEXT->layerMenu.layers[i+1];
+
+								CURRENT_CONTEXT->layerMenu.alignLayerLabels();								
+							}
+							break;
+						}
+						i++;
+					}
+				}
+			}, 
+			sf::Vector2f(op.x + opoff, op.y + marginY * i), true, buttonColor)
+		);
+
+
+	}
+
+
 public:
 
+	// editor grid buttons
 	Option moveLeft;
 	Option moveRight;
 	Option moveUp;
@@ -385,6 +430,13 @@ public:
 	Option paintTile;
 	Option eraseTile;
 	//
+	// Layer toolbar buttons
+	Option addLayer;
+	Option deleteLayer;
+	Option moveUpLayer;
+	Option moveDownLayer;
+	//
+	// list of all ui elements
 	std::vector<Option> uiElements;	
 
 	ToolBar_top toolbar_top;
@@ -403,15 +455,18 @@ public:
 		fileExplorer(sf::Vector2f(width*WINDOW_SIZE_MULTIPLIER, height*WINDOW_SIZE_MULTIPLIER), sf::Vector2f((width-width*WINDOW_SIZE_MULTIPLIER)/2, (height-height*WINDOW_SIZE_MULTIPLIER)/2))	
 	{
 	
-		CURRENT_CONTEXT = new Context(sf::Vector2f(0, toolbar_tab.getPosition().y + toolbar_tab.getSize().y + toolbar_tab.getOutlineThickness()*2));
+		std::string mapName = "Home";
+	
+		CURRENT_CONTEXT = new Context(mapName, sf::Vector2f(0, toolbar_tab.getPosition().y + toolbar_tab.getSize().y + toolbar_tab.getOutlineThickness()*2));
 		contextList.push_back(CURRENT_CONTEXT);
 		
 		TOOLBAR_TEXTURES = &CURRENT_CONTEXT->toolbar_textures;
 		
-		initUiElements();	
+		initUiElements();
 		initToolbarTop();
+		initLayerMenu();
 
-		toolbar_tab.addOption("Home", CURRENT_CONTEXT);
+		toolbar_tab.addOption(mapName, CURRENT_CONTEXT);
 
 		initNewProjectPanel();
 		
@@ -423,7 +478,9 @@ public:
 		createFloatRectMask(toolbar_tab);
 		createFloatRectMask(CURRENT_CONTEXT->toolbar_textures);
 		createFloatRectMask(CURRENT_CONTEXT->toolbar_textures.scrollWheel);
-		createFloatRectMask(CURRENT_CONTEXT->editorGrid);
+		createFloatRectMask(*CURRENT_CONTEXT->layerMenu.selectedLayer);
+		createFloatRectMask(CURRENT_CONTEXT->layerMenu);
+		createFloatRectMask(CURRENT_CONTEXT->layerMenu.scrollWheel);
 		
 		for(Option & option : uiElements)
 		{
@@ -456,6 +513,10 @@ public:
 		{
 			newProjectPanel.update();
 		}
+		else if((CURRENT_CONTEXT != nullptr) && (CURRENT_CONTEXT->confirmationPrompt.isOpen()))
+		{
+			CURRENT_CONTEXT->confirmationPrompt.update();
+		}
 		else
 		{
 			toolbar_top.update();
@@ -463,8 +524,19 @@ public:
 
 			for(Option & option : uiElements) option.update();
 			
-			if(CURRENT_CONTEXT != nullptr) CURRENT_CONTEXT->update();			
+			if(CURRENT_CONTEXT != nullptr)
+			{
+				if(sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) && sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+				{
+					CURRENT_CONTEXT->save(savePATH + CURRENT_CONTEXT->mapName + saveFileExtension);
+				}
+				
+				CURRENT_CONTEXT->update();
+			}
 		}
+		
+		CURSOR->isBodyVisible = (CURRENT_CONTEXT != nullptr) && ( CURRENT_CONTEXT->layerMenu.selectedLayer && Collision::AABB(*CURSOR, *CURRENT_CONTEXT->layerMenu.selectedLayer) || Collision::AABB(*CURSOR, CURRENT_CONTEXT->toolbar_textures) );			
+		
 	}
 	
 	std::vector<Object *> getObjects()
@@ -476,7 +548,7 @@ public:
 		if(CURRENT_CONTEXT != nullptr)
 		{
 			objects.push_back((Object*)(&CURRENT_CONTEXT->toolbar_textures));
-			objects.push_back((Object*)(&CURRENT_CONTEXT->editorGrid));
+			objects.push_back((Object*)(CURRENT_CONTEXT->layerMenu.selectedLayer));
 		}
 		
 		if(toolbar_top.options.size())
@@ -516,6 +588,10 @@ public:
 		if(newProjectPanel.isOpen())
 		{
 			newProjectPanel.render(window);
+		}
+		if(CURRENT_CONTEXT && CURRENT_CONTEXT->confirmationPrompt.isOpen())
+		{
+			CURRENT_CONTEXT->confirmationPrompt.render(window);
 		}
 	}
 };

@@ -3,10 +3,6 @@
 
 #include <SFML/Graphics.hpp>
 
-//#include "texture_pack_preview.hpp"
-
-class TexturePackPreview;
-
 class Tile : public Object
 {
 //private:
@@ -19,14 +15,19 @@ public:
 	int index = -1;
 //	int indexInGrid = -1;
 	int indexInTexturePack = -1;
-	TexturePackPreview * texturePack = nullptr;
 	
-	Tile(sf::Vector2f size, sf::Vector2f pos, int index, int indexInTexturePack = -1, TexturePackPreview * texturePack = nullptr) : 
+	// cannot actually access any of texturePack's member variables
+//	TexturePackPreview * texturePack = nullptr;
+	
+	std::string texturePATH = "";
+	
+//	Tile(sf::Vector2f size, sf::Vector2f pos, int index, int indexInTexturePack = -1, TexturePackPreview * texturePack = nullptr) : 
+	Tile(sf::Vector2f size, sf::Vector2f pos, int index, int indexInTexturePack = -1, std::string texturePATH = "") : 
 		Object(size),
 		hoverBox(size),
 		index(index),
 		indexInTexturePack(indexInTexturePack),
-		texturePack(texturePack)
+		texturePATH(texturePATH)
 	{
 		setPosition(pos);
 		hoverBox.setPosition(pos);

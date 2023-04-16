@@ -19,17 +19,22 @@ public:
 	Tile * selectedTile = NULL;
 	std::vector<Tile> tiles;
 
-	EditorGrid(sf::Vector2f size, sf::Vector2f pos) : Object(size) 
-	{
+	bool drawBackPanel = false;
+
+	EditorGrid(sf::Vector2f size, sf::Vector2f pos, sf::Color gridColor = sf::Color::Black) : Object(size) 
+	{		
 		setPosition(pos);
 		setSize(size);
 
-		setFillColor(sf::Color(200,200,200));
+//		setFillColor(sf::Color(200,200,200));
+		setFillColor(sf::Color::Transparent);
 		setOutlineThickness(0.5);
 		setOutlineColor(sf::Color::Black);
 		
 		// number of tiles in the texturePack
 		sf::Vector2u texturePackTileNum = gridSize;
+		
+		gridColor.a = 200;
 		
 		for(unsigned int y = 0; y < texturePackTileNum.y; y++)
 		{
@@ -47,15 +52,17 @@ public:
 				color.a = 0;
 				tile.setFillColor(color);
 
-//				tile.index = (y*texturePackTileNum.x) + x;
-//				tile.indexInGrid = (y * texturePackTileNum.x) + x;
-
-				tile.hoverBox.setOutlineColor(sf::Color(0,0,0,200));
+				tile.hoverBox.setOutlineColor(gridColor);
 				tile.hoverColor = sf::Color::Black;
 				tiles.push_back(tile);
 			}
 		}
 
+	}
+	
+	~EditorGrid()
+	{
+		
 	}
 	
 	void changePosition(sf::Vector2f pos)
@@ -107,14 +114,12 @@ public:
 		}
 	}
 	
-	void update()
-	{
-
-	}
-	
 	void render(sf::RenderWindow & window)
 	{
-		window.draw(*this);
+		if(drawBackPanel)
+		{
+			window.draw(*this);
+		}
 		if(tiles.size())
 		{
 			for(Tile & tile : tiles)
