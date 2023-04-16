@@ -34,7 +34,9 @@ main(int argc, char ** argv)
 	sf::Event event;
 
 //	sf::Color clearColor = sf::Color(150, 150, 180);
-	sf::Color clearColor = sf::Color(125, 145, 160);
+//	sf::Color clearColor = sf::Color(125, 145, 160);
+
+	sf::Color clearColor = sf::Color(200,200,200);
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Main loop starts here ...																			 */
@@ -58,12 +60,15 @@ main(int argc, char ** argv)
 			{
 				if(updateClock.getElapsedTime().asMilliseconds() > updateTime)
 				{
-					if(sf::Keyboard::isKeyPressed(sf::Keyboard::A)) UI.moveLeft.action();
-					if(sf::Keyboard::isKeyPressed(sf::Keyboard::D)) UI.moveRight.action();
-					if(sf::Keyboard::isKeyPressed(sf::Keyboard::W)) UI.moveUp.action();
-					if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)) UI.moveDown.action();
-					
-					updateClock.restart();
+					if(!sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
+					{
+						if(sf::Keyboard::isKeyPressed(sf::Keyboard::A)) UI.moveLeft.action();
+						if(sf::Keyboard::isKeyPressed(sf::Keyboard::D)) UI.moveRight.action();
+						if(sf::Keyboard::isKeyPressed(sf::Keyboard::W)) UI.moveUp.action();
+						if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)) UI.moveDown.action();
+						
+						updateClock.restart();
+					}
 				}
 				
 				CURSOR->isClicked = false;
@@ -108,7 +113,13 @@ main(int argc, char ** argv)
 						{
 							printf("Zooming!\n");
 							double zoom = event.mouseWheelScroll.delta > 0 ? 0.1 : -0.1;
-							if(CURRENT_CONTEXT != nullptr) CURRENT_CONTEXT->editorGrid.changeScale(zoom);
+							if(CURRENT_CONTEXT)
+							{
+								for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+								{
+									layer.changeScale(zoom);
+								}
+							}
 						}
 					}
 					else if(event.mouseWheelScroll.wheel == sf::Mouse::HorizontalWheel)

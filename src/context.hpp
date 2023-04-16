@@ -107,6 +107,22 @@ public:
 									}
 								);
 							}
+							else
+							{								
+								int i = 0;
+								for(TexturePackPreview & p : toolbar_textures.texturePreviews)
+								{
+									if(&p == &preview)
+									{
+										toolbar_textures.texturePreviews.erase(toolbar_textures.texturePreviews.begin() + i);
+										toolbar_textures.selectedTexturePreview = NULL;
+
+										toolbar_textures.alignPreviews();
+										break;
+									}
+									i++;
+								}								
+							}
 							break;
 						}						
 					}
@@ -270,45 +286,51 @@ public:
 			}
 			fprintf(fp, "}\n\n");
 
-			fprintf(fp, "Tiles:\n{\n");
-			if(layerMenu.selectedLayer->tiles.size())
+			if(layerMenu.layers.size())
 			{
-				std::string texturePATH = "";
-				int textureIndex = 0;
-				
-				fprintf(fp, "\t");
-				
-				for(Tile & tile : layerMenu.selectedLayer->tiles)
-				{					
-					if((!texturePATH.length()) || ((tile.texturePATH.length()) && (tile.texturePATH != texturePATH)))
+				for(Layer & layer : layerMenu.layers)
+				{
+					fprintf(fp, "%s:\n{\n", layer.name.c_str());
+					if(layer.tiles.size())
 					{
-						texturePATH = "";
-						textureIndex = 0;
-						for(TexturePackPreview & preview : toolbar_textures.texturePreviews)
-						{
-							if(preview.PATH == tile.texturePATH)
+						std::string texturePATH = "";
+						int textureIndex = 0;
+						
+						fprintf(fp, "\t");
+						
+						for(Tile & tile : layer.tiles)
+						{					
+							if((!texturePATH.length()) || ((tile.texturePATH.length()) && (tile.texturePATH != texturePATH)))
 							{
-								texturePATH = preview.PATH;
-								break;
+								texturePATH = "";
+								textureIndex = 0;
+								for(TexturePackPreview & preview : toolbar_textures.texturePreviews)
+								{
+									if(preview.PATH == tile.texturePATH)
+									{
+										texturePATH = preview.PATH;
+										break;
+									}
+									textureIndex += 1;
+								}
 							}
-							textureIndex += 1;
+							
+							if(tile.indexInTexturePack >= 0)
+							{
+								fprintf(fp, "[%d;%d]", textureIndex, tile.indexInTexturePack);
+							}
+							else
+							{
+								fprintf(fp, "[ ]");
+							}
+							
+							fprintf(fp, ",%s", (tile.index && ((tile.index+1) != (layerMenu.selectedLayer->gridSize.x * layerMenu.selectedLayer->gridSize.y)) && !((tile.index+1) % layerMenu.selectedLayer->gridSize.x) ? "\n\t" : " " ));
+							
 						}
 					}
-					
-					if(tile.indexInTexturePack >= 0)
-					{
-						fprintf(fp, "[%d;%d]", textureIndex, tile.indexInTexturePack);
-					}
-					else
-					{
-						fprintf(fp, "[ ]");
-					}
-					
-					fprintf(fp, ",%s", (tile.index && ((tile.index+1) != (layerMenu.selectedLayer->gridSize.x * layerMenu.selectedLayer->gridSize.y)) && !((tile.index+1) % layerMenu.selectedLayer->gridSize.x) ? "\n\t" : " " ));
-					
+					fprintf(fp, "\n}\n\n");
 				}
 			}
-			fprintf(fp, "\n}\n\n");
 						
 			fclose(fp);
 			
