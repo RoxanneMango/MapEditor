@@ -25,6 +25,9 @@ private:
 	std::string savePATH = "../saves/";
 	std::string saveFileExtension = ".map";
 
+	sf::Clock updateClock;
+	float updateTime = 60;
+
 	void createFloatRectMask(sf::RectangleShape & shape)
 	{
 		sf::FloatRect rect = sf::FloatRect(
@@ -449,6 +452,8 @@ public:
 	FileExplorer fileExplorer;
 
 	std::vector<Context *> contextList;
+	
+	InputField * selectedInput = nullptr;
 
 	UserInterface(int width, int height) : 
 		sf::RectangleShape(sf::Vector2f(width, height)),
@@ -514,6 +519,7 @@ public:
 		else if(newProjectPanel.isOpen())
 		{
 			newProjectPanel.update();
+			selectedInput = newProjectPanel.currentInput;
 		}
 		else if((CURRENT_CONTEXT != nullptr) && (CURRENT_CONTEXT->confirmationPrompt.isOpen()))
 		{
@@ -528,11 +534,29 @@ public:
 			
 			if(CURRENT_CONTEXT != nullptr)
 			{
-				if(sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) && sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+				// handle user input (only if the window is in focus)
+				if(WINDOW->hasFocus())
 				{
-					CURRENT_CONTEXT->save(savePATH + CURRENT_CONTEXT->mapName + saveFileExtension);
+					if(sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) && sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+					{
+						CURRENT_CONTEXT->save(savePATH + CURRENT_CONTEXT->mapName + saveFileExtension);
+					}
+					else if(updateClock.getElapsedTime().asMilliseconds() > updateTime)
+					{
+						if(!sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
+						{
+							if(sf::Keyboard::isKeyPressed(sf::Keyboard::A)) moveLeft.action();
+							if(sf::Keyboard::isKeyPressed(sf::Keyboard::D)) moveRight.action();
+							if(sf::Keyboard::isKeyPressed(sf::Keyboard::W)) moveUp.action();
+							if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)) moveDown.action();
+							
+							if(sf::Keyboard::isKeyPressed(sf::Keyboard::Z)) zoomIn.action();
+							if(sf::Keyboard::isKeyPressed(sf::Keyboard::X)) zoomOut.action();
+							
+							updateClock.restart();
+						}
+					}					
 				}
-				
 				CURRENT_CONTEXT->update();
 			}
 		}

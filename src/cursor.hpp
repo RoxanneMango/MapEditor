@@ -13,7 +13,8 @@ enum CursorMode
 	Default = 0,
 	Paint,
 	Select,
-	Delete
+	Delete,
+	Text
 };
 
 class Cursor : public sf::RectangleShape
@@ -87,6 +88,11 @@ public:
 				fp::SetCursor(sf::Cursor::NotAllowed);
 				resetBody();
 //				SELECTED_TEXTURE_PACK->isSelected = false;
+				break;
+			}
+			case CursorMode::Text:
+			{
+				fp::SetCursor(sf::Cursor::Text);
 				break;
 			}
 			default:

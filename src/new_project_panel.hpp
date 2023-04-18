@@ -1,6 +1,15 @@
 #ifndef NEW_PROJECT_PANEL_HPP
 #define NEW_PROJECT_PANEL_HPP
 
+#include <SFML/Graphics.hpp>
+#include <vector>
+#include <string>
+
+#include "option.hpp"
+#include "line.hpp"
+#include "input_field.hpp"
+#include "collision.hpp"
+
 class NewProjectPanel : public sf::RectangleShape
 {
 private:
@@ -8,12 +17,25 @@ private:
 	sf::Text closeButton_x = sf::Text("X", *FONT, FONT_SIZE);
 	sf::RectangleShape closeButton;
 	sf::Line topDivider;
+	
+	InputField inputFieldProjectName;
+	InputField inputFieldMapName;
+	InputField inputFieldTileSize;
+	InputField inputFieldMapSize;
+	
 public:
+	InputField * currentInput = nullptr;
+
 	std::vector<Option> options;
+	std::vector<InputField> inputs;
 
 	bool isVisible = false;
 
-	NewProjectPanel() : sf::RectangleShape(sf::Vector2f(1000, 700))
+	NewProjectPanel() : sf::RectangleShape(sf::Vector2f(1000, 700)),
+		inputFieldProjectName(sf::Vector2f(200, 40), "Project name:"),
+		inputFieldMapName(sf::Vector2f(200, 40), "Map name:"),
+		inputFieldTileSize(sf::Vector2f(200, 40), "Tile size:"),
+		inputFieldMapSize(sf::Vector2f(200, 40), "Map size:")
 	{
 		sf::Color color = sf::Color(230, 230, 230);
 		setFillColor(color);
@@ -34,6 +56,20 @@ public:
 		closeButton_x.setPosition(sf::Vector2f(closeButton.getPosition().x + 10, closeButton.getPosition().y + 3));
 
 		topDivider = sf::Line(sf::Vector2f(getPosition().x, getPosition().y + closeButton.getSize().y + 10), getSize().x, 1);		
+		
+		sf::Vector2f inputPos = sf::Vector2f(getPosition().x + 50, topDivider.getPosition().y + 60);
+		int inputMargin = inputFieldProjectName.getSize().y + 50;
+		int i = 0;
+		
+		inputFieldProjectName.changePosition(sf::Vector2f(inputPos.x, inputPos.y + inputMargin*i++));
+		inputFieldMapName.changePosition(sf::Vector2f(inputPos.x,  inputPos.y + inputMargin*i++));
+		inputFieldTileSize.changePosition(sf::Vector2f(inputPos.x,  inputPos.y + inputMargin*i++));
+		inputFieldMapSize.changePosition(sf::Vector2f(inputPos.x,  inputPos.y + inputMargin*i++));
+		
+		inputs.push_back(inputFieldProjectName);
+		inputs.push_back(inputFieldMapName);
+		inputs.push_back(inputFieldTileSize);
+		inputs.push_back(inputFieldMapSize);
 		
 	}
 
@@ -84,6 +120,31 @@ public:
 				{
 					option.update();
 				}
+				
+				bool textHover = false;
+				for(InputField & inputField : inputs)
+				{
+					if(Collision::AABB(*CURSOR, inputField))
+					{
+						textHover = true;
+						if(sf::Mouse::isButtonPressed(sf::Mouse::Left))
+						{
+							inputField.isSelected = true;
+							inputField.setOutlineThickness(3);
+							currentInput = &inputField;
+						}
+					}
+					else
+					{
+						if(sf::Mouse::isButtonPressed(sf::Mouse::Left))
+						{
+							inputField.isSelected = false;
+							inputField.setOutlineThickness(2);
+						}
+					}					
+					inputField.update();
+				}
+				CURSOR->setMode(textHover ? CursorMode::Text : CursorMode::Default);
 			}
 		}
 		catch(...)
@@ -106,7 +167,12 @@ public:
 			for(Option & option : options)
 			{
 				option.render(window);
-			}			
+			}
+			
+			for(InputField & inputField : inputs)
+			{
+				inputField.render(window);
+			}
 		}		
 	}
 };

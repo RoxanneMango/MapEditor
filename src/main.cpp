@@ -25,7 +25,7 @@ main(int argc, char ** argv)
 	WINDOW->setVerticalSyncEnabled(false);
 	WINDOW->setActive(true);
 	WINDOW->setView(sf::View(sf::FloatRect(VIEW_CENTER_X, VIEW_CENTER_Y, screenWidth, screenHeight)));
-	WINDOW->setKeyRepeatEnabled(false);
+//	WINDOW->setKeyRepeatEnabled(false);
 
 	sf::Image window_icon;
 	window_icon.loadFromFile("../assets/pumpkin.png");
@@ -46,34 +46,15 @@ main(int argc, char ** argv)
 
 	fp::SetCursor(sf::Cursor::Arrow);
 
-	sf::Clock updateClock;
-	float updateTime = 60;
-
 	UserInterface UI(screenWidth, screenHeight);
 
 	while (WINDOW->isOpen())
 	{
 		try
 		{
-			// only handle input like that if window is in focus
-			if(WINDOW->hasFocus())
-			{
-				if(updateClock.getElapsedTime().asMilliseconds() > updateTime)
-				{
-					if(!sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
-					{
-						if(sf::Keyboard::isKeyPressed(sf::Keyboard::A)) UI.moveLeft.action();
-						if(sf::Keyboard::isKeyPressed(sf::Keyboard::D)) UI.moveRight.action();
-						if(sf::Keyboard::isKeyPressed(sf::Keyboard::W)) UI.moveUp.action();
-						if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)) UI.moveDown.action();
-						
-						updateClock.restart();
-					}
-				}
-				
-				CURSOR->isClicked = false;
-	//			CURSOR->isClicked = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
-			}
+			CURSOR->isClicked = false;
+//			CURSOR->isClicked = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
+
 			while (WINDOW->pollEvent(event))
 			{
 				if(event.type == sf::Event::Closed) WINDOW->close();
@@ -84,19 +65,41 @@ main(int argc, char ** argv)
 				if(event.type == sf::Event::KeyPressed && WINDOW->hasFocus())
 				{
 					if(event.key.code == sf::Keyboard::Escape) WINDOW->close();
-
-					if(event.key.code == sf::Keyboard::Z) UI.zoomIn.action();
-					if(event.key.code == sf::Keyboard::X) UI.zoomOut.action();
 					
 					if(event.key.code == sf::Keyboard::F) CURSOR->setMode(CursorMode::Default);
 					if(event.key.code == sf::Keyboard::Q) CURSOR->setMode(CursorMode::Delete);					
 
-//					if(event.key.code == sf::Keyboard::A) UI.editorGrid.moveLeft.action();
-//					if(event.key.code == sf::Keyboard::D) UI.editorGrid.moveRight.action();
-//					if(event.key.code == sf::Keyboard::W) UI.editorGrid.moveUp.action();
-//					if(event.key.code == sf::Keyboard::S) UI.editorGrid.moveDown.action();
+					// echo back characters in the input field if one is selected
+					// this part here only checks if the backspace key is pressed
+					// if the backspace key is pressed, pop back 1 char from  the
+					// text string in the input
+					if(UI.selectedInput && UI.selectedInput->isSelected) 
+					{
+						std::string str = UI.selectedInput->text.getString();
+						if((event.key.code == sf::Keyboard::BackSpace) && str.length())
+						{							
+							str.pop_back();
+							UI.selectedInput->text.setString(str);
+						}
+					}
 
 				}
+				
+				// echo back characters in the input field if one is selected
+				// only echo back characters that are printable. Characters get
+				// appended to the text string of the selected input
+				if(UI.selectedInput && UI.selectedInput->isSelected && (event.type == sf::Event::TextEntered)) 
+				{
+					if(event.text.unicode < 128)
+					{
+						std::string str = UI.selectedInput->text.getString();
+						if(std::isprint(event.text.unicode))
+						{
+							UI.selectedInput->text.setString(str + (char)(event.text.unicode));
+						}
+					}
+				}
+
 				if(event.type == sf::Event::MouseButtonPressed)
 				{
 					if(event.mouseButton.button == sf::Mouse::Button::Left)

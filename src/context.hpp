@@ -184,7 +184,7 @@ public:
 		if(sf::Mouse::isButtonPressed(sf::Mouse::Left))
 		{
 			layerMenu.selectedLayer->selectedTile = NULL;
-		}		
+		}
 		
 		// Go through all tiles in editor grid, if there are any ...
 		if(layerMenu.selectedLayer->tiles.size())
