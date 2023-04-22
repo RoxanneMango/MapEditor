@@ -22,7 +22,9 @@ public:
 
 	bool drawBackPanel = false;
 
-	EditorGrid(sf::Vector2f size, sf::Vector2f pos, sf::Color gridColor = sf::Color::Black)
+	sf::Color gridColor;
+
+	EditorGrid(sf::Vector2f size, sf::Vector2f pos, sf::Color gridColor = sf::Color::Black) : gridColor(gridColor)
 	{		
 		setPosition(pos);
 		setSize(size);
@@ -31,34 +33,67 @@ public:
 		setFillColor(sf::Color::Transparent);
 		setOutlineThickness(0.5);
 		setOutlineColor(sf::Color::Black);
+
+	}
+
+	EditorGrid(sf::Vector2f size, sf::Vector2f pos, sf::Vector2u gridSize, sf::Color gridColor = sf::Color::Black) : gridColor(gridColor)
+	{		
+		setPosition(pos);
+		setSize(size);
+
+//		setFillColor(sf::Color(200,200,200));
+		setFillColor(sf::Color::Transparent);
+		setOutlineThickness(0.5);
+		setOutlineColor(sf::Color::Black);
+
+		initGrid(gridSize, gridColor);
+	}
+	
+
+	void initGrid(sf::Vector2u gridSize, sf::Color color = sf::Color::Black)
+	{
+		// clear grid first
+		if(tiles.size())
+		{
+			tiles.clear();
+		}
 		
-		// number of tiles in the texturePack
-		sf::Vector2u texturePackTileNum = gridSize;
+		// check if gridSize is sane
+		if(!gridSize.x || !gridSize.y)
+		{
+			printf("Cannot have a grid with a x or y dimension of 0!\n");
+			return;
+		}
 		
+		gridColor = color;
 		gridColor.a = 200;
 		
-		for(unsigned int y = 0; y < texturePackTileNum.y; y++)
+		this->gridSize = gridSize;
+		
+		sf::Vector2f pos = getPosition();
+		
+		for(unsigned int y = 0; y < gridSize.y; y++)
 		{
-			for(unsigned int x = 0; x < texturePackTileNum.x; x++)
+			for(unsigned int x = 0; x < gridSize.x; x++)
 			{				
 				sf::Vector2f texturePos( x*tile_size, y*tile_size );
 
 				Tile tile(
 					sf::Vector2f(tile_size, tile_size), 
 					sf::Vector2f(pos.x + texturePos.x + margin*x, pos.y + texturePos.y + margin*y),
-					(y*texturePackTileNum.x) + x // index
+					(y*gridSize.x) + x // index
 				);
 
-				sf::Color color = tile.getFillColor();
-				color.a = 0;
-				tile.setFillColor(color);
+				sf::Color c = tile.getFillColor();
+				c.a = 0;
+				tile.setFillColor(c);
 
 				tile.hoverBox.setOutlineColor(gridColor);
 				tile.hoverColor = sf::Color::Black;
 				tiles.push_back(tile);
 			}
 		}
-
+		
 	}
 	
 	~EditorGrid()

@@ -33,6 +33,30 @@ public:
 		wheeliePiece.setOutlineColor(sf::Color::Black);
 	}
 	
+	float adjustSize(int sizeY)
+	{
+		unsigned int height = abs(getPosition().y - sizeY);
+		float scrollScale = 1;
+		
+		if(height > (int)getSize().y)
+		{
+			isEnabled = true;
+			scrollScale = (height / getSize().y);
+			
+			unsigned int wheelSize = (int)getSize().y / scrollScale;
+			
+			wheeliePiece.setSize(sf::Vector2f(wheeliePiece.getSize().x, wheelSize));
+//			printf("height: %d; wheelie height: %d; scale: %f.02\n", height, wheelSize, scrollScale);
+
+		}
+		else
+		{
+			isEnabled = false;
+			wheeliePiece.setSize(sf::Vector2f(wheeliePiece.getSize().x, getSize().y));
+		}
+		
+		return scrollScale;
+	}
 	
 	virtual void update()
 	{

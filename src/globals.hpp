@@ -18,6 +18,12 @@ namespace fp {
 			WINDOW->setMouseCursor(cursor);
 		}
 	}
+
+	constexpr int pow(int b, int e)
+	{
+		return (e == 0) ? 1 : b * fp::pow(b, e - 1);
+	}	
+	
 }
 
 #endif // GLOBAL_HPP

@@ -274,28 +274,50 @@ private:
 
 	void initNewProjectPanel()
 	{
-		sf::Vector2f pos = sf::Vector2f(newProjectPanel.getPosition().x/2 + newProjectPanel.getSize().x/2, newProjectPanel.getPosition().y + newProjectPanel.getSize().y - 50);		
+		sf::Vector2f pos = sf::Vector2f(newProjectPanel.getPosition().x/2 + newProjectPanel.getSize().x/2, newProjectPanel.getPosition().y + newProjectPanel.getSize().y - 70);		
 		newProjectPanel.addOption("Create new Project", pos, [&]()
 			{
 
-				std::string mapName = "Unsaved " + std::to_string(toolbar_tab.tabs.size());
+				if(newProjectPanel.inputIsCorrrect())
+				{					
+					std::string mapName =  newProjectPanel.inputFieldMapName.getString();//+ std::to_string(toolbar_tab.tabs.size());
+					sf::Vector2u gridSize = sf::Vector2u(
+						newProjectPanel.inputFieldMapSize_width.getUnsignedInteger(),
+						newProjectPanel.inputFieldMapSize_height.getUnsignedInteger()					
+					);
 
-				Context * currentContext = new Context(mapName, sf::Vector2f(0, toolbar_tab.getPosition().y + toolbar_tab.getSize().y + toolbar_tab.getOutlineThickness()*2));
-				contextList.push_back(currentContext);			
-				CURRENT_CONTEXT = currentContext;
-				TOOLBAR_TEXTURES = &currentContext->toolbar_textures;
-				
-				toolbar_tab.addOption(mapName, currentContext);
-				toolbar_tab.selectedIndex = toolbar_tab.tabs.size()-1;
-				for(Tab & tab : toolbar_tab.tabs)
-				{
-					tab.deselect();
+					if(!gridSize.x || !gridSize.y)
+					{
+						if(!gridSize.x)
+						{
+							newProjectPanel.inputFieldMapSize_width.setFillColor(newProjectPanel.inputFieldMapSize_width.errorColor);
+						}
+						if(!gridSize.y)
+						{
+							newProjectPanel.inputFieldMapSize_height.setFillColor(newProjectPanel.inputFieldMapSize_height.errorColor);
+						}						
+						return;
+					}
+
+					Context * currentContext = new Context(mapName, gridSize, sf::Vector2f(0, toolbar_tab.getPosition().y + toolbar_tab.getSize().y + toolbar_tab.getOutlineThickness()*2));
+					
+					TOOLBAR_TEXTURES = &currentContext->toolbar_textures;
+					
+					toolbar_tab.addOption(mapName, currentContext);
+					toolbar_tab.selectedIndex = toolbar_tab.tabs.size()-1;
+					for(Tab & tab : toolbar_tab.tabs)
+					{
+						tab.deselect();
+					}
+					toolbar_tab.tabs[toolbar_tab.tabs.size()-1].select();
+					
+					printf("Create new project!...\n");
+					
+					contextList.push_back(currentContext);
+					CURRENT_CONTEXT = currentContext;
+					
+					newProjectPanel.close();
 				}
-				toolbar_tab.tabs[toolbar_tab.tabs.size()-1].select();
-				
-				printf("Create new project!...\n");
-				
-				newProjectPanel.close();
 			}
 		);		
 	}
@@ -320,8 +342,10 @@ private:
 				{
 					CURRENT_CONTEXT->layerMenu.addLayer(
 						sf::Vector2f(800, 600),
-						sf::Vector2f(CURRENT_CONTEXT->getPosition().x + 600, CURRENT_CONTEXT->getPosition().y + 10), 
-						"Layer_" + std::to_string(CURRENT_CONTEXT->layerMenu.layers.size())
+						sf::Vector2f(CURRENT_CONTEXT->getPosition().x + 600, 
+						CURRENT_CONTEXT->getPosition().y + 10), 
+						"Layer_" + std::to_string(CURRENT_CONTEXT->layerMenu.layers.size()), 
+						CURRENT_CONTEXT->gridSize
 					);
 					moveReset.action();
 				}
@@ -347,6 +371,8 @@ private:
 					{
 						CURRENT_CONTEXT->layerMenu.selectedLayer = &CURRENT_CONTEXT->layerMenu.layers[i];
 						CURRENT_CONTEXT->layerMenu.selectedLayer->option.isSelected = true;
+						
+						CURRENT_CONTEXT->layerMenu.adjustScrollWheel();
 					}
 					else
 					{
@@ -415,7 +441,10 @@ private:
 			sf::Vector2f(op.x + opoff, op.y + marginY * i), true, buttonColor)
 		);
 
-
+		if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.selectedLayer)
+		{
+			CURRENT_CONTEXT->layerMenu.selectedLayer->initGrid(sf::Vector2u(8,8));
+		}
 	}
 
 
@@ -464,7 +493,7 @@ public:
 	
 		std::string mapName = "Home";
 	
-		CURRENT_CONTEXT = new Context(mapName, sf::Vector2f(0, toolbar_tab.getPosition().y + toolbar_tab.getSize().y + toolbar_tab.getOutlineThickness()*2));
+		CURRENT_CONTEXT = new Context(mapName, sf::Vector2u(8,8), sf::Vector2f(0, toolbar_tab.getPosition().y + toolbar_tab.getSize().y + toolbar_tab.getOutlineThickness()*2));
 		contextList.push_back(CURRENT_CONTEXT);
 		
 		TOOLBAR_TEXTURES = &CURRENT_CONTEXT->toolbar_textures;
@@ -535,27 +564,35 @@ public:
 			if(CURRENT_CONTEXT != nullptr)
 			{
 				// handle user input (only if the window is in focus)
-				if(WINDOW->hasFocus())
+				//
+				// handle input every (updateTime) ms -- this is to prevent
+				// unnecessary input spam and make it so stuff that is done
+				// to the editorGrid is bottle necked at a certain speed
+				//
+				// If something like moveLeft() was performed every game cycle instead of
+				// every x number of milliseconds the grid would fly away into the sunset...
+				if(WINDOW->hasFocus() && (updateClock.getElapsedTime().asMilliseconds() > updateTime))
 				{
+					// Save selected context to .map file in ../saves
 					if(sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) && sf::Keyboard::isKeyPressed(sf::Keyboard::S))
 					{
 						CURRENT_CONTEXT->save(savePATH + CURRENT_CONTEXT->mapName + saveFileExtension);
-					}
-					else if(updateClock.getElapsedTime().asMilliseconds() > updateTime)
+					}						
+					
+					// Perform actions on the editorGrid layer(s)
+					if(!sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
 					{
-						if(!sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
-						{
-							if(sf::Keyboard::isKeyPressed(sf::Keyboard::A)) moveLeft.action();
-							if(sf::Keyboard::isKeyPressed(sf::Keyboard::D)) moveRight.action();
-							if(sf::Keyboard::isKeyPressed(sf::Keyboard::W)) moveUp.action();
-							if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)) moveDown.action();
-							
-							if(sf::Keyboard::isKeyPressed(sf::Keyboard::Z)) zoomIn.action();
-							if(sf::Keyboard::isKeyPressed(sf::Keyboard::X)) zoomOut.action();
-							
-							updateClock.restart();
-						}
+						// Move the editor grid around (left;right;up;down)
+						if(sf::Keyboard::isKeyPressed(sf::Keyboard::A)) moveLeft.action();
+						if(sf::Keyboard::isKeyPressed(sf::Keyboard::D)) moveRight.action();
+						if(sf::Keyboard::isKeyPressed(sf::Keyboard::W)) moveUp.action();
+						if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)) moveDown.action();
+						
+						// set the size scale of the editor grid (zooming in/out)
+						if(sf::Keyboard::isKeyPressed(sf::Keyboard::Z)) zoomIn.action();
+						if(sf::Keyboard::isKeyPressed(sf::Keyboard::X)) zoomOut.action();
 					}					
+					updateClock.restart();
 				}
 				CURRENT_CONTEXT->update();
 			}

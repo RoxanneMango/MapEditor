@@ -24,15 +24,18 @@ public:
 	std::string mapName = "";
 	std::string saveFile = "";
 	
-	Context(std::string name, sf::Vector2f pos) : 
+	sf::Vector2u gridSize = sf::Vector2u(0,0);
+	
+	Context(std::string name, sf::Vector2u gridSize, sf::Vector2f pos) : 
 		sf::RectangleShape(sf::Vector2f(sf::VideoMode::getDesktopMode().width * WINDOW_SIZE_MULTIPLIER, (sf::VideoMode::getDesktopMode().height * WINDOW_SIZE_MULTIPLIER)-pos.y)),
 		toolbar_textures(sf::Vector2f(540, 600), sf::Vector2f(pos.x + 10, pos.y + 10)),
 		mapName(name),
+		gridSize(gridSize),
 		layerMenu(sf::Vector2f(400, 100), sf::Vector2f(pos.x + 600, pos.y + 600 + 25))
 	{
 		setPosition(pos);
 		
-		layerMenu.addLayer(sf::Vector2f(800, 600), sf::Vector2f(pos.x + 600, pos.y + 10), "Layer_0");
+		layerMenu.addLayer(sf::Vector2f(800, 600), sf::Vector2f(pos.x + 600, pos.y + 10), "Layer_0", gridSize);
 		layerMenu.selectedLayer = &layerMenu.layers[0];
 	}
 	
@@ -100,6 +103,8 @@ public:
 												toolbar_textures.selectedTexturePreview = NULL;
 
 												toolbar_textures.alignPreviews();
+												toolbar_textures.adjustScrollWheel();
+												
 												break;
 											}
 											i++;
@@ -118,6 +123,7 @@ public:
 										toolbar_textures.selectedTexturePreview = NULL;
 
 										toolbar_textures.alignPreviews();
+										toolbar_textures.adjustScrollWheel();
 										break;
 									}
 									i++;

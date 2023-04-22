@@ -18,24 +18,27 @@ private:
 	sf::RectangleShape closeButton;
 	sf::Line topDivider;
 	
+public:
+
 	InputField inputFieldProjectName;
 	InputField inputFieldMapName;
 	InputField inputFieldTileSize;
-	InputField inputFieldMapSize;
-	
-public:
+	InputField inputFieldMapSize_width;
+	InputField inputFieldMapSize_height;
+
 	InputField * currentInput = nullptr;
 
 	std::vector<Option> options;
-	std::vector<InputField> inputs;
+	std::vector<InputField *> inputs;
 
 	bool isVisible = false;
 
 	NewProjectPanel() : sf::RectangleShape(sf::Vector2f(1000, 700)),
-		inputFieldProjectName(sf::Vector2f(200, 40), "Project name:"),
-		inputFieldMapName(sf::Vector2f(200, 40), "Map name:"),
-		inputFieldTileSize(sf::Vector2f(200, 40), "Tile size:"),
-		inputFieldMapSize(sf::Vector2f(200, 40), "Map size:")
+		inputFieldProjectName(sf::Vector2f(200, 40), InputField::Type::String, "Project name:"),
+		inputFieldMapName(sf::Vector2f(200, 40), InputField::Type::String, "Map name:"),
+		inputFieldTileSize(sf::Vector2f(200, 40), InputField::Type::UnsignedInteger, "Tile size:"),
+		inputFieldMapSize_width(sf::Vector2f(200, 40), InputField::Type::UnsignedInteger, "Map width (tiles):"),
+		inputFieldMapSize_height(sf::Vector2f(200, 40), InputField::Type::UnsignedInteger, "Map height (tiles):")
 	{
 		sf::Color color = sf::Color(230, 230, 230);
 		setFillColor(color);
@@ -64,13 +67,34 @@ public:
 		inputFieldProjectName.changePosition(sf::Vector2f(inputPos.x, inputPos.y + inputMargin*i++));
 		inputFieldMapName.changePosition(sf::Vector2f(inputPos.x,  inputPos.y + inputMargin*i++));
 		inputFieldTileSize.changePosition(sf::Vector2f(inputPos.x,  inputPos.y + inputMargin*i++));
-		inputFieldMapSize.changePosition(sf::Vector2f(inputPos.x,  inputPos.y + inputMargin*i++));
+		inputFieldMapSize_width.changePosition(sf::Vector2f(inputPos.x,  inputPos.y + inputMargin*i++));
+		inputFieldMapSize_height.changePosition(sf::Vector2f(inputPos.x,  inputPos.y + inputMargin*i++));
 		
-		inputs.push_back(inputFieldProjectName);
-		inputs.push_back(inputFieldMapName);
-		inputs.push_back(inputFieldTileSize);
-		inputs.push_back(inputFieldMapSize);
-		
+		inputFieldProjectName.text.setString("projName");
+		inputFieldMapName.text.setString("hello");
+		inputFieldTileSize.text.setString("64");
+		inputFieldMapSize_width.text.setString("10");
+		inputFieldMapSize_height.text.setString("5");		
+			
+		inputs.push_back(&inputFieldProjectName);
+		inputs.push_back(&inputFieldMapName);
+		inputs.push_back(&inputFieldTileSize);
+		inputs.push_back(&inputFieldMapSize_width);
+		inputs.push_back(&inputFieldMapSize_height);
+	}
+
+	bool inputIsCorrrect()
+	{
+		bool isCorrect = true;
+		for(InputField * input : inputs)
+		{
+			if(!input->isValid())
+			{
+				input->setFillColor(input->errorColor);
+				isCorrect = false;
+			}
+		}
+		return isCorrect;
 	}
 
 	void addOption(std::string label, sf::Vector2f pos, std::function<void()> func, bool highLightOnHover = true)
@@ -122,27 +146,28 @@ public:
 				}
 				
 				bool textHover = false;
-				for(InputField & inputField : inputs)
+				for(InputField * inputField : inputs)
 				{
-					if(Collision::AABB(*CURSOR, inputField))
+					if(Collision::AABB(*CURSOR, *inputField))
 					{
 						textHover = true;
 						if(sf::Mouse::isButtonPressed(sf::Mouse::Left))
 						{
-							inputField.isSelected = true;
-							inputField.setOutlineThickness(3);
-							currentInput = &inputField;
+							inputField->isSelected = true;
+							inputField->setFillColor(inputField->color);
+							inputField->setOutlineThickness(3);
+							currentInput = inputField;
 						}
 					}
 					else
 					{
 						if(sf::Mouse::isButtonPressed(sf::Mouse::Left))
 						{
-							inputField.isSelected = false;
-							inputField.setOutlineThickness(2);
+							inputField->isSelected = false;
+							inputField->setOutlineThickness(2);
 						}
 					}					
-					inputField.update();
+					inputField->update();
 				}
 				CURSOR->setMode(textHover ? CursorMode::Text : CursorMode::Default);
 			}
@@ -169,9 +194,9 @@ public:
 				option.render(window);
 			}
 			
-			for(InputField & inputField : inputs)
+			for(InputField * inputField : inputs)
 			{
-				inputField.render(window);
+				inputField->render(window);
 			}
 		}		
 	}

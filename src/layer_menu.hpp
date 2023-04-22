@@ -22,8 +22,8 @@ public:
 	
 	}	
 	
-	Layer(sf::Vector2f size, sf::Vector2f pos, std::string name, Option option, sf::Color color) : 
-		EditorGrid(size, pos, color), 
+	Layer(sf::Vector2f size, sf::Vector2f pos, std::string name, sf::Vector2u gridSize, Option option, sf::Color color) : 
+		EditorGrid(size, pos, gridSize, color), 
 		option(option),
 		line(sf::Vector2f(option.getPosition().x, option.getPosition().y + option.getSize().y), option.getSize().x),
 		name(name)
@@ -49,10 +49,10 @@ public:
 		}
 	}
 	
-	void renderOptions(sf::RenderWindow & window)
+	void renderOption(sf::RenderWindow & window)
 	{
 		option.render(window);
-		window.draw(line);		
+		window.draw(line);
 	}
 };
 
@@ -60,6 +60,7 @@ class LayerMenu : public sf::RectangleShape
 {
 public:
 	ScrollWheel_vertical scrollWheel;
+	float scrollScale = 1;
 
 	std::vector<Layer> layers;
 	Layer * selectedLayer = nullptr;
@@ -69,10 +70,17 @@ public:
 		setSize(size);
 		setPosition(pos);
 		setFillColor(sf::Color(125, 145, 160));
+		
+//		scrollWheel.isEnabled = false;
 	}
 
 	~LayerMenu()
 	{ }
+
+	void adjustScrollWheel()
+	{
+		scrollScale = scrollWheel.adjustSize(layers[layers.size()-1].option.getPosition().y + layers[layers.size()-1].option.getSize().y);
+	}
 
 	void alignLayerLabels()
 	{
@@ -85,11 +93,11 @@ public:
 		}
 	}
 
-	void addLayer(sf::Vector2f size, sf::Vector2f pos, std::string name)
+	void addLayer(sf::Vector2f size, sf::Vector2f pos, std::string name, sf::Vector2u gridSize)
 	{
 		sf::Vector2f oPos = sf::Vector2f(getPosition().x, getPosition().y + layers.size()*30);		
 		
-		layers.push_back(Layer(size, pos, name, Option(name, [](){}, oPos), sf::Color::Black));
+		layers.push_back(Layer(size, pos, name, gridSize, Option(name, [](){}, oPos), sf::Color::Black));
 		Layer & layer = layers[layers.size()-1];
 
 		int uiElementTotalBorderSize = 8;
@@ -106,13 +114,9 @@ public:
 		layer.option.isSelected = true;
 
 		selectedLayer = &layer;	
-		
-		// Enable and resize the scrollbar once there are enough elements to warrant scrolling
-//		sf::Vector2f wheelieSize = sf::Vector2f();
-		scrollWheel.wheeliePiece.setSize(sf::Vector2f(scrollWheel.wheeliePiece.getSize().x, scrollWheel.getSize().y / layers.size()));
-		scrollWheel.isEnabled = false;
-		
-//		return layer;
+
+		alignLayers();
+		adjustScrollWheel();
 	}
 	
 	void alignLayers()
@@ -125,11 +129,11 @@ public:
 			for(unsigned int o = 0; o < i; o++) offset += layer.option.getSize().y + layer.line.thickness;
 
 			layer.option.changePosition(sf::Vector2f(getPosition().x, 
-				scrollWheel.getPosition().y + offset - abs(scrollWheel.getPosition().y - scrollWheel.wheeliePiece.getPosition().y)
+				scrollWheel.getPosition().y + offset - abs(scrollWheel.getPosition().y - scrollWheel.wheeliePiece.getPosition().y)*scrollScale
 			));
 
 			layer.line.setPosition(sf::Vector2f(getPosition().x,
-					scrollWheel.getPosition().y + offset - abs(scrollWheel.getPosition().y - scrollWheel.wheeliePiece.getPosition().y)
+					scrollWheel.getPosition().y + offset - abs(scrollWheel.getPosition().y - scrollWheel.wheeliePiece.getPosition().y) * scrollScale
 				)
 			);
 
@@ -168,16 +172,18 @@ public:
 	
 	void render(sf::RenderWindow & window)
 	{
+//		window.draw(*this);
+		for(Layer & layer : layers)
+		{
+			if(layer.option.getPosition().y >= (scrollWheel.getPosition().y - (layer.option.getSize().y)))
+			{
+				layer.renderOption(window);
+			}
+		}
 		for(Layer & layer : layers)
 		{
 			layer.renderGrid(window);
 		}
-		window.draw(*this);
-		for(Layer & layer : layers)
-		{
-			layer.renderOptions(window);
-		}
-
 		scrollWheel.render(window);
 	}
 };

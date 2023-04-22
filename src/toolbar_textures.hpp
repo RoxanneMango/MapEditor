@@ -14,6 +14,8 @@ class ToolBar_textures : public Object
 	sf::Vector2f textureSize;
 	float texturesHeight = margin.y;
 	
+	float scrollScale = 1;
+	
 public:
 	TexturePackPreview * selectedTexturePreview;
 	std::vector<TexturePackPreview> texturePreviews;
@@ -24,6 +26,8 @@ public:
 	{		
 		setSize(size);
 
+		scrollWheel.wheeliePiece.setSize(sf::Vector2f(scrollWheel.wheeliePiece.getSize().x, size.y));
+
 		setPosition(position);
 		setFillColor(sf::Color(125, 145, 160));
 		setOutlineThickness(3);
@@ -31,6 +35,7 @@ public:
 		
 		textureSize = sf::Vector2f(size.x - margin.x, size.x - margin.y);
 		addTexturePreview("../assets/texturepack.png");
+		addTexturePreview("../assets/texturepack_grass.png");
 //		addTexturePreview("../assets/pumpkin.png");
 		
 	}
@@ -42,7 +47,7 @@ public:
 			unsigned int offset = 0;
 			for(unsigned int o = 0; o < i; o++) offset += texturePreviews[o].getHeight() + texturePreviews[o].margin*2;
 			texturePreviews[i].changePosition(sf::Vector2f(texturePreviews[i].getPosition().x, 
-				scrollWheel.getPosition().y + offset + margin.y - abs(scrollWheel.getPosition().y - scrollWheel.wheeliePiece.getPosition().y)
+				scrollWheel.getPosition().y + offset + margin.y - abs(scrollWheel.getPosition().y - scrollWheel.wheeliePiece.getPosition().y)*scrollScale
 			));
 		}		
 	}
@@ -50,6 +55,11 @@ public:
 	void update()
 	{
 		
+	}
+	
+	void adjustScrollWheel()
+	{
+		scrollScale = scrollWheel.adjustSize(texturePreviews[texturePreviews.size()-1].getPosition().y + texturePreviews[texturePreviews.size()-1].getSize().y + margin.y*2);
 	}
 	
 	int addTexturePreview(std::string PATH)
@@ -63,6 +73,8 @@ public:
 			texturePreviews.push_back(tpp);
 			
 			alignPreviews();
+			
+			adjustScrollWheel();
 			
 			return 1;
 		}
