@@ -95,7 +95,7 @@ public:
 		isVisible = true;
 		isConfirmed = false;
 	}
-	
+		
 	void close()
 	{
 		if(isConfirmed)

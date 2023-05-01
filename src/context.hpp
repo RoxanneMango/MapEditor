@@ -61,37 +61,45 @@ public:
 					{
 						if(layerMenu.selectedLayer && layerMenu.selectedLayer->tiles.size())
 						{							
-							bool textureIsInUse = false;
-							for(Tile & tile : layerMenu.selectedLayer->tiles)
+							bool textureIsInUse = false;							
+							for(Layer & layer : layerMenu.layers)
 							{
-								if(tile.texturePATH == preview.PATH)
+								for(Tile & tile : layer.tiles)
 								{
-									textureIsInUse = true;
-									break;
+									if(tile.texturePATH == preview.PATH)
+									{
+										textureIsInUse = true;
+										break;
+									}
 								}
 							}
 							
 							if(layerMenu.selectedLayer && textureIsInUse && !confirmationPrompt.isOpen())
 							{
-								confirmationPrompt.open(
+								confirmationPrompt.open
+								(
 									"This will remove the texture\npack from the list and delete\nall tiles that reference it\nin the editor grid!",
-									[&](){
+									[&]()
+									{
 										
 										// delete all tiles that reference the removed texture pack
-										for(Tile & tile : layerMenu.selectedLayer->tiles)
+										for(Layer & layer : layerMenu.layers)
 										{
-											if(tile.texturePATH == preview.PATH)
+											for(Tile & tile : layer.tiles)
 											{
-												tile.texturePATH = "";
-												tile.indexInTexturePack = -1;
-												
-												tile.setTexture(NULL);
-												tile.setTextureRect(sf::IntRect(0,0,0,0));
+												if(tile.texturePATH == preview.PATH)
+												{
+													tile.texturePATH = "";
+													tile.indexInTexturePack = -1;
+													
+													tile.setTexture(NULL);
+													tile.setTextureRect(sf::IntRect(0,0,0,0));
 
-												sf::Color color = tile.getFillColor();
-												color.a = 0;
-												tile.setFillColor(color);	
-											}												
+													sf::Color color = tile.getFillColor();
+													color.a = 0;
+													tile.setFillColor(color);	
+												}												
+											}
 										}
 										
 										int i = 0;
@@ -152,7 +160,7 @@ public:
 							);
 							
 							// if a tile is clicked ...
-							if(WINDOW->hasFocus() && sf::Mouse::isButtonPressed(sf::Mouse::Left))
+							if(WINDOW->hasFocus() && CURSOR->isPressed())//sf::Mouse::isButtonPressed(sf::Mouse::Left))
 							{
 								toolbar_textures.selectedTexturePreview = &preview;		// set this preview to be the selected preview
 								preview.selectedTile = &tile;			// set this tile to be the selected tile
@@ -269,7 +277,7 @@ public:
 	
 	bool save(std::string fileName)
 	{
-		printf("mapname: %s", mapName.c_str());
+//		printf("mapname: %s", mapName.c_str());
 		if(mapName.length())
 		{			
 			FILE * fp = fopen(fileName.c_str(), "w");
@@ -341,7 +349,8 @@ public:
 			fclose(fp);
 			
 			saveFile = fileName;			
-			printf("Save file: %s\n", saveFile.c_str());
+//			printf("Save file: %s\n", saveFile.c_str());
+			printf("saved!\n");
 			
 			return true;
 		}

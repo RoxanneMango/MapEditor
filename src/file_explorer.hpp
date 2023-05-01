@@ -16,6 +16,7 @@
 #include "collision.hpp"
 #include "toolbar_textures.hpp"
 #include "globals.hpp"
+#include "input_field.hpp"
 
 namespace FileExplorerButton
 {
@@ -71,10 +72,9 @@ namespace FileExplorerButton
 	};
 }
 
-
 class FileExplorer : public sf::RectangleShape
 {
-private:
+protected:
 	sf::Text window_title = sf::Text("File explorer", *FONT, FONT_SIZE);
 	
 	sf::Text closeButton_x = sf::Text("X", *FONT, FONT_SIZE);
@@ -101,7 +101,7 @@ private:
 	dirent * entry;
 	std::string cwd;
 	
-	void readDirEntries()
+	virtual void readDirEntries()
 	{
 		try
 		{
@@ -128,7 +128,7 @@ private:
 				}
 				else
 				{
-					txt.setFillColor(sf::Color(120, 120, 120));					
+					txt.setFillColor(sf::Color(120, 120, 120));
 				}
 				closedir(testDIR);
 
@@ -157,7 +157,7 @@ private:
 		}
 	}
 	
-	void changeDirectory(std::string dir)
+	virtual bool changeDirectory(std::string dir)
 	{
 		try
 		{
@@ -203,12 +203,17 @@ private:
 					}
 				}
 				printf("file %s\n", dir.c_str());
+
+				return true;
 			}
 		}
 		catch(...)
 		{
 			printf("Something went wrong when changing directories!\n");
 		}
+		
+		return false;
+		
 	}
 	
 public:
@@ -249,30 +254,16 @@ public:
 		currentDirectory_txt.setPosition(sf::Vector2f(currentDirectory.getPosition().x + 5, currentDirectory.getPosition().y + 5));
 		currentDirectory_txt.setFillColor(sf::Color::Black);
 
-//		printf("initial push!\n");
-//		directory_entries.push_back(cwd.c_str());
-//		entries_index = directory_entries.size()-1;		
-
 		readDirEntries();
 
 	}
 	
-	bool isOpen()
-	{
-		return isVisible;
-	}
-	
-	void open()
-	{
-		isVisible = true;
-	}
-	
-	void close()
-	{
-		isVisible = false;
-	}
+	void open()		{ 	isVisible = true;	 }
+	void close()	{ 	isVisible = false;	 }
+	//
+	bool isOpen() 	{ 	return isVisible;	 }
 		
-	void update()
+	virtual void update()
 	{
 		try
 		{
@@ -294,7 +285,7 @@ public:
 				upButton.update(); 			if(upButton.isPressed()) changeDirectory("..");
 
 				backButton.update();
-				forwardButton.update();//	if(forwardButton.isPressed()) ;
+				forwardButton.update();
 
 				if(directory_entries.size())
 				{
@@ -341,7 +332,7 @@ public:
 		}
 	}
 	
-	void render(sf::RenderWindow & window)
+	virtual void render(sf::RenderWindow & window)
 	{
 		if(isVisible)
 		{

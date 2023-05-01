@@ -92,6 +92,11 @@ public:
 		return 0;
 	}
 	
+	void setString(std::string str)
+	{
+		text.setString(str);
+	}
+	
 	std::string getString()
 	{
 		return text.getString();
@@ -144,8 +149,11 @@ public:
 	void changePosition(sf::Vector2f pos)
 	{
 		setPosition(pos);
-		title.setPosition(sf::Vector2f(pos.x, pos.y - FONT_SIZE - 10));		
-		text.setPosition(sf::Vector2f(pos.x + 5, pos.y + 5));
+		title.setPosition(sf::Vector2f(pos.x, pos.y - FONT_SIZE - 10));
+		
+		int yPos = getSize().y - FONT_SIZE*1.2;
+		
+		text.setPosition(sf::Vector2f(pos.x + 5, pos.y + (yPos ? yPos/2 : 0) ));
 		
 		float lineMargin = abs(getSize().y - blinkLine.length)/2;
 		

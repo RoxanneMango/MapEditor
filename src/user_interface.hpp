@@ -11,6 +11,7 @@
 #include "cursor.hpp"
 #include "context.hpp"
 #include "new_project_panel.hpp"
+#include "save_file_explorer.hpp"
 
 class UserInterface : public sf::RectangleShape
 {
@@ -246,6 +247,10 @@ private:
 		toolbar_top.dropdownMenus[ToolBar_top::DropDownMenus::File].addOption("Save As...", [&]()
 		{
 			printf("Save As!\n");
+			selectedInput = &saveFileExplorer.input;
+			saveFileExplorer.open([&](std::string str){
+				CURRENT_CONTEXT->save(str);
+			});
 		});
 		
 		// export map into map object for frankenpatch game to use
@@ -479,6 +484,7 @@ public:
 	NewProjectPanel newProjectPanel;
 
 	FileExplorer fileExplorer;
+	SaveFileExplorer saveFileExplorer;
 
 	std::vector<Context *> contextList;
 	
@@ -488,7 +494,8 @@ public:
 		sf::RectangleShape(sf::Vector2f(width, height)),
 		toolbar_top(sf::Vector2f(width, toolbar_top_height)),
 		toolbar_tab(sf::Vector2f(width, toolbar_tab_height), sf::Vector2f(0, toolbar_top.getSize().y), &contextList),
-		fileExplorer(sf::Vector2f(width*WINDOW_SIZE_MULTIPLIER, height*WINDOW_SIZE_MULTIPLIER), sf::Vector2f((width-width*WINDOW_SIZE_MULTIPLIER)/2, (height-height*WINDOW_SIZE_MULTIPLIER)/2))	
+		fileExplorer(sf::Vector2f(width*WINDOW_SIZE_MULTIPLIER, height*WINDOW_SIZE_MULTIPLIER), sf::Vector2f((width-width*WINDOW_SIZE_MULTIPLIER)/2, (height-height*WINDOW_SIZE_MULTIPLIER)/2)),
+		saveFileExplorer(sf::Vector2f(width*WINDOW_SIZE_MULTIPLIER, height*WINDOW_SIZE_MULTIPLIER), sf::Vector2f((width-width*WINDOW_SIZE_MULTIPLIER)/2, (height-height*WINDOW_SIZE_MULTIPLIER)/2))	
 	{
 	
 		std::string mapName = "Home";
@@ -545,10 +552,14 @@ public:
 		{
 			fileExplorer.update();
 		}
+		else if(saveFileExplorer.isOpen())
+		{
+			saveFileExplorer.update();
+		}
 		else if(newProjectPanel.isOpen())
 		{
-			newProjectPanel.update();
 			selectedInput = newProjectPanel.currentInput;
+			newProjectPanel.update();
 		}
 		else if((CURRENT_CONTEXT != nullptr) && (CURRENT_CONTEXT->confirmationPrompt.isOpen()))
 		{
@@ -647,6 +658,10 @@ public:
 		if(fileExplorer.isOpen())
 		{
 			fileExplorer.render(window);
+		}
+		if(saveFileExplorer.isOpen())
+		{
+			saveFileExplorer.render(window);
 		}
 		if(newProjectPanel.isOpen())
 		{

@@ -93,29 +93,32 @@ public:
 					isSelected = false;
 				}
 			}
-			else if((selectedIndex >= 0) && dropdownMenus[selectedIndex].isVisible)
-			{
-				for(Option & option : dropdownMenus[selectedIndex].options)
-				{
-					if(Collision::AABB(*CURSOR, option))
-					{
-						option.action();
-						CURSOR->isPressed();
-						dropdownMenus[selectedIndex].select(false);
-						selectedIndex = -1;
-						isSelected = false;
-						break;
-					}
-				}
-			}
 			else
 			{
-				for(ToolBar_dropdown & ddMenu : dropdownMenus)
+				if((selectedIndex >= 0) && dropdownMenus[selectedIndex].isVisible)
 				{
-					ddMenu.select(false);
-				}				
+					for(Option & option : dropdownMenus[selectedIndex].options)
+					{
+						if(Collision::AABB(*CURSOR, option))
+						{
+							option.action();
+							CURSOR->isPressed();
+							break;
+						}
+					}
+
+					for(ToolBar_dropdown & ddMenu : dropdownMenus)
+					{
+						ddMenu.select(false);
+					}
+					selectedIndex = -1;
+					isSelected = false;
+
+					printf("Deselect all\n");
+
+				}
 			}
-		}			
+		}
 		
 		if(options.size())
 		{
