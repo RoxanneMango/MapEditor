@@ -12,6 +12,7 @@
 #include "context.hpp"
 #include "new_project_panel.hpp"
 #include "save_file_explorer.hpp"
+#include "resize_grid_panel.hpp"
 
 class UserInterface : public sf::RectangleShape
 {
@@ -274,7 +275,25 @@ private:
 		toolbar_top.dropdownMenus[ToolBar_top::DropDownMenus::File].addOption("Exit...", []()
 		{ 
 			WINDOW->close();
-		});		
+		});
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		toolbar_top.dropdownMenus[ToolBar_top::DropDownMenus::Map].addOption("Resize Map...", [&]()
+		{
+			if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.selectedLayer)
+			{
+				resizeGridPanel.open(CURRENT_CONTEXT->layerMenu.selectedLayer->gridSize, [&](unsigned int w, unsigned int h, EditorGrid::ResizeDirection d){
+
+					printf("w: %u, h: %u, d: %d\n", w, h, d);
+				});
+			}
+		});
+	}
+
+	void initResizeGridPanel()
+	{
+		
 	}
 
 	void initNewProjectPanel()
@@ -324,7 +343,7 @@ private:
 					newProjectPanel.close();
 				}
 			}
-		);		
+		);
 	}
 
 	void initLayerMenu()
@@ -482,6 +501,7 @@ public:
 	ToolBar_tab toolbar_tab;
 
 	NewProjectPanel newProjectPanel;
+	ResizeGridPanel resizeGridPanel;
 
 	FileExplorer fileExplorer;
 	SaveFileExplorer saveFileExplorer;
@@ -512,6 +532,7 @@ public:
 		toolbar_tab.addOption(mapName, CURRENT_CONTEXT);
 
 		initNewProjectPanel();
+		initResizeGridPanel();
 		
 		foreground.setSize(sf::Vector2f(width, height));
 //		foreground.setPosition(currentContext->getPosition());
@@ -560,6 +581,11 @@ public:
 		{
 			selectedInput = newProjectPanel.currentInput;
 			newProjectPanel.update();
+		}
+		else if(resizeGridPanel.isOpen())
+		{
+			selectedInput = resizeGridPanel.currentInput;
+			resizeGridPanel.update();
 		}
 		else if((CURRENT_CONTEXT != nullptr) && (CURRENT_CONTEXT->confirmationPrompt.isOpen()))
 		{
@@ -666,6 +692,10 @@ public:
 		if(newProjectPanel.isOpen())
 		{
 			newProjectPanel.render(window);
+		}
+		if(resizeGridPanel.isOpen())
+		{
+			resizeGridPanel.render(window);
 		}
 		if(CURRENT_CONTEXT && CURRENT_CONTEXT->confirmationPrompt.isOpen())
 		{

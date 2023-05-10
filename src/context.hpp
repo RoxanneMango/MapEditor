@@ -107,11 +107,12 @@ public:
 										{
 											if(&p == &preview)
 											{
+												toolbar_textures.adjustScrollWheel();
+												
 												toolbar_textures.texturePreviews.erase(toolbar_textures.texturePreviews.begin() + i);
 												toolbar_textures.selectedTexturePreview = NULL;
 
-												toolbar_textures.alignPreviews();
-												toolbar_textures.adjustScrollWheel();
+												//toolbar_textures.alignPreviews();
 												
 												break;
 											}

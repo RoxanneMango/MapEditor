@@ -10,6 +10,13 @@
 class EditorGrid : public Object
 {
 public:
+	enum ResizeDirection
+	{
+		NorthWest = 0,	North,	NorthEast,	//	[NW] [N] [NE]
+		West,			Center,	East,		//	[W ] [C] [W ]	
+		SouthWest,		South,	SouthEast	//	[SW] [S] [SE]
+	};
+
 	int margin = 2;
 	int textMargin = 10;
 	unsigned int tile_size = 64;

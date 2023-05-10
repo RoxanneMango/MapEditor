@@ -32,7 +32,8 @@ public:
 	bool isSelected = false;
 	sf::Text text;
 
-	sf::Color color = sf::Color(240, 240, 240);
+//	sf::Color color = sf::Color(240, 240, 240);
+	sf::Color color = sf::Color::White;
 //	sf::Color selectedColor = sf::Color(235, 235, 235);
 	sf::Color outlineColor = sf::Color(50, 50, 50);
 	sf::Color errorColor = sf::Color(240, 200, 200);
@@ -63,11 +64,11 @@ public:
 		}
 		else if(type == Type::Integer)
 		{
-			return isValidInteger();
+			return isValidInteger() && getInteger();
 		}
 		else if(type == Type::UnsignedInteger)
 		{
-			return isValidUnsignedInteger();
+			return isValidUnsignedInteger() && getUnsignedInteger();
 		}
 		return false;
 	}

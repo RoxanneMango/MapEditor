@@ -42,7 +42,7 @@ public:
 		option.setSize(sf::Vector2f(getSize().x, option.getSize().y));
 		
 		options.push_back(option);
-		setSize(sf::Vector2f(getSize().x, margin.y + ((margin.y + option.getSize().y) * (options.size()-1))));
+		setSize(sf::Vector2f(getSize().x, ((margin.y + option.getSize().y) * (options.size() > 1 ? options.size()-1 : 1))));
 	}
 	
 	void select(bool value)

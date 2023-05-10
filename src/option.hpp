@@ -48,18 +48,46 @@ public:
 		hoverBox.setSize(size);
 		
 	}
+
+	Option(std::string str, std::function<void()> a, sf::Vector2f pos, sf::Vector2f size, int outlineThickness, bool highLightOnHover = true, sf::Color fillColor = sf::Color::Transparent, uint8_t transparency = 128) : 
+		text(str, *font, FONT_SIZE), action(a), highLightOnHover(highLightOnHover), transparency(transparency)
+	{
+		changePosition(pos);
+		changeSize(size);
+
+		setFillColor(fillColor);
+		hoverBox.setFillColor(sf::Color::Transparent);
+		text.setFillColor(sf::Color::Black);
+		
+		setOutlineThickness(outlineThickness);
+		setOutlineColor(sf::Color::Black);
+
+		alignCenter();
+	}
+
 	
 	void changePosition(sf::Vector2f pos)
 	{
 		setPosition(sf::Vector2f(pos.x - 5, pos.y));
 		hoverBox.setPosition(getPosition());
-		text.setPosition(pos);
+
+		int yPos = getSize().y - FONT_SIZE*1.2;		
+		text.setPosition(sf::Vector2f(pos.x + 5, pos.y + (yPos ? yPos/2 : 0) ));
+//		text.setPosition(pos);
 	}
 	
 	void changeSize(sf::Vector2f size)
 	{		
 		setSize(size);
 		hoverBox.setSize(size);		
+
+		int yPos = getSize().y - FONT_SIZE*1.2;		
+		text.setPosition(sf::Vector2f(getPosition().x + 5, getPosition().y + (yPos ? yPos/2 : 0) ));
+	}
+	
+	void alignCenter()
+	{
+		text.setPosition(sf::Vector2f(getPosition().x + getSize().x/2 - text.getGlobalBounds().width/2, text.getPosition().y));
 	}
 	
 	void doAction()

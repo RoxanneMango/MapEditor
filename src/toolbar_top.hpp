@@ -113,9 +113,6 @@ public:
 					}
 					selectedIndex = -1;
 					isSelected = false;
-
-					printf("Deselect all\n");
-
 				}
 			}
 		}

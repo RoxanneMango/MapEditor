@@ -45,11 +45,16 @@ public:
 		for(unsigned int i = 0; i < texturePreviews.size(); i++)
 		{
 			unsigned int offset = 0;
-			for(unsigned int o = 0; o < i; o++) offset += texturePreviews[o].getHeight() + texturePreviews[o].margin*2;
+
+			for(unsigned int o = 0; o < i; o++)
+			{
+				offset += texturePreviews[o].getHeight() + texturePreviews[o].margin*2;
+			}
+
 			texturePreviews[i].changePosition(sf::Vector2f(texturePreviews[i].getPosition().x, 
 				scrollWheel.getPosition().y + offset + margin.y - abs(scrollWheel.getPosition().y - scrollWheel.wheeliePiece.getPosition().y)*scrollScale
 			));
-		}		
+		}
 	}
 	
 	void update()
@@ -60,6 +65,16 @@ public:
 	void adjustScrollWheel()
 	{
 		scrollScale = scrollWheel.adjustSize(texturePreviews[texturePreviews.size()-1].getPosition().y + texturePreviews[texturePreviews.size()-1].getSize().y + margin.y*2);
+		if(scrollScale == 1)
+		{
+			if(texturePreviews.size())
+			{
+				scrollWheel.wheeliePiece.setSize(sf::Vector2f(scrollWheel.wheeliePiece.getSize().x, scrollWheel.getSize().y));
+				scrollWheel.wheeliePiece.setPosition(sf::Vector2f(scrollWheel.wheeliePiece.getPosition().x, scrollWheel.getPosition().y));
+				
+				alignPreviews();
+			}
+		}
 	}
 	
 	int addTexturePreview(std::string PATH)
