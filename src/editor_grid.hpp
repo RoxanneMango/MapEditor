@@ -17,6 +17,10 @@ public:
 		SouthWest,		South,	SouthEast	//	[SW] [S] [SE]
 	};
 
+	float minScale = 0.3;
+	float maxScale = 5;
+	float currentScale = 1;
+
 	int margin = 2;
 	int textMargin = 10;
 	unsigned int tile_size = 64;
@@ -132,26 +136,34 @@ public:
 	}
 
 	void changeScale(float scale)
-	{
+	{		
 		if(tiles.size())
 		{
+			double oldScale = tiles[0].getScale().x;
+			double newScale = oldScale + scale;
+			
+//			printf("oldScale: %0.5f ; newScale : %0.5f\n", oldScale, newScale);
+			
+			if((oldScale+scale) < minScale) return;
+			if((oldScale+scale) > maxScale) return;
+			
 			for(Tile & tile : tiles)
-			{
-				double oldScale = tile.getScale().x;
-				tile.setScale(oldScale + scale, oldScale + scale);
-				tile.hoverBox.setScale(oldScale + scale, oldScale + scale);
+			{				
+				tile.setScale(newScale, newScale);
+				tile.hoverBox.setScale(newScale, newScale);
 			}
 			changePosition(tiles[0].getPosition());
 		}
 	}
 	void resetGrid()
 	{
+		currentScale = 1;
 		if(tiles.size())
 		{
 			for(Tile & tile : tiles)
 			{
-				tile.setScale(1,1);
-				tile.hoverBox.setScale(1,1);
+				tile.setScale(currentScale,currentScale);
+				tile.hoverBox.setScale(currentScale,currentScale);
 			}
 			changePosition(getPosition());
 		}

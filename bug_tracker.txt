@@ -6,7 +6,7 @@
 [x] Removing a texturepack from the texture pack previews will not reposition the scroll view to the previous texture preview.
     The scroll wheel will disable automatically if there are not enough texture packs to warrant scrolling, and this paired with
     the lack of repositioning can cause a soft lock where you can't scroll back up to the previous texture pack.
-[ ] Zooming in and out on the editor grid can cause overflows, causing the grid to essentially get mirrored. This behavior needs to
+[x] Zooming in and out on the editor grid can cause overflows, causing the grid to essentially get mirrored. This behavior needs to
     be clamped to maximum and minimum zoom values. Scrolling is also delayed when using a trackpad because it can't keep up with the
     input (could be made worse because changes are printed to stdout at the moment, causing additonal lagg)
 [ ] Resizing the window will not resize the components within. Components should scale with the size of the window.

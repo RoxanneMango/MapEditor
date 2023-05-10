@@ -111,10 +111,10 @@ main(int argc, char ** argv)
 				{
 					if(event.mouseWheelScroll.wheel == sf::Mouse::VerticalWheel)
 					{
-						printf("wheel type: vertical\n");
+//						printf("wheel type: vertical\n");
 						if(sf::Keyboard::isKeyPressed(sf::Keyboard::LShift))
 						{
-							printf("Zooming!\n");
+//							printf("Zooming!\n");
 							double zoom = event.mouseWheelScroll.delta > 0 ? 0.1 : -0.1;
 							if(CURRENT_CONTEXT)
 							{
@@ -127,16 +127,16 @@ main(int argc, char ** argv)
 					}
 					else if(event.mouseWheelScroll.wheel == sf::Mouse::HorizontalWheel)
 					{
-						printf("wheel type: horizontal\n");
+//						printf("wheel type: horizontal\n");
 					}
 					else
 					{
-						printf("wheel type: unknown\n");
+//						printf("wheel type: unknown\n");
 					}
 
-					printf("wheel movement: %f\n", event.mouseWheelScroll.delta);
-					printf("mouse x: %d\n", event.mouseWheelScroll.x);
-					printf("mouse y: %d\n", event.mouseWheelScroll.y);					
+//					printf("wheel movement: %f\n", event.mouseWheelScroll.delta);
+//					printf("mouse x: %d\n", event.mouseWheelScroll.x);
+//					printf("mouse y: %d\n", event.mouseWheelScroll.y);					
 				}				
 			}
 			
