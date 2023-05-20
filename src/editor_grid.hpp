@@ -17,11 +17,11 @@ public:
 		SouthWest,		South,	SouthEast	//	[SW] [S] [SE]
 	};
 
-	float minScale = 0.3;
+	float minScale = 0.005;
 	float maxScale = 5;
 	float currentScale = 1;
 
-	int margin = 2;
+	int margin = 1;
 	int textMargin = 10;
 	unsigned int tile_size = 64;
 
@@ -103,8 +103,7 @@ public:
 				tile.hoverColor = sf::Color::Black;
 				tiles.push_back(tile);
 			}
-		}
-		
+		}		
 	}
 	
 	~EditorGrid()
@@ -147,12 +146,25 @@ public:
 			if((oldScale+scale) < minScale) return;
 			if((oldScale+scale) > maxScale) return;
 			
+			currentScale = newScale;
+						
 			for(Tile & tile : tiles)
 			{				
 				tile.setScale(newScale, newScale);
 				tile.hoverBox.setScale(newScale, newScale);
 			}
-			changePosition(tiles[0].getPosition());
+
+			Tile & t = tiles[0];
+
+			sf::Vector2f size = sf::Vector2f(
+				gridSize.x*TILE_SIZE*newScale + t.getOutlineThickness()*newScale + margin*newScale, 
+				gridSize.y*TILE_SIZE*newScale + t.getOutlineThickness()*newScale + margin*newScale);
+			
+			sf::Vector2f newPos = sf::Vector2f(
+				tiles[0].getPosition().x + (size.x/gridSize.x * (scale>0?-1:1))/2,
+				tiles[0].getPosition().y + (size.y/gridSize.y * (scale>0?-1:1))/2
+			);
+			changePosition(newPos);
 		}
 	}
 	void resetGrid()

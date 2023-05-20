@@ -23,6 +23,7 @@ private:
 	
 	std::function<void(unsigned int, unsigned int, EditorGrid::ResizeDirection)> action = [](unsigned int, unsigned int, EditorGrid::ResizeDirection){};
 	
+	float tile_size = TILE_SIZE;
 	static constexpr int inputMargin = 30;	
 
 	EditorGrid::ResizeDirection resizeDirection;
@@ -30,9 +31,93 @@ private:
 
 	Option previewSizeButton;
 	Option resizeButton;
+	Option shrinkToFitButton;
 
-	std::vector<Tile> tiles;
+	std::vector<Layer> * grids;
 	sf::Vector2u gridSize;
+	//
+	std::vector<Layer> layers;
+	sf::Vector2u originalSize;
+
+	sf::RectangleShape gridOutline = sf::RectangleShape();
+	sf::RectangleShape selectionOverlay = sf::RectangleShape();
+	
+	std::pair<sf::Vector2u, sf::Vector2u> calculatePoints()
+	{		
+		sf::Vector2u size;
+		size.x = this->originalSize.x > gridSize.x ? gridSize.x : this->originalSize.x;
+		size.y = this->originalSize.y > gridSize.y ? gridSize.y : this->originalSize.y;
+		
+		sf::Vector2u p1 = sf::Vector2u(0,0);
+		sf::Vector2u p2 = size;
+		
+		if(resizeDirection == EditorGrid::ResizeDirection::NorthWest) // yes
+		{
+			p1 = sf::Vector2u(0, 0);
+			p2 = sf::Vector2u(size.x, size.y);
+		}
+		else if(resizeDirection == EditorGrid::ResizeDirection::North) // yes
+		{
+			p1 = sf::Vector2u(gridSize.x/2 - size.x/2, 0);
+			p2 = sf::Vector2u(size.x + p1.x, size.y);
+		}
+		else if(resizeDirection == EditorGrid::ResizeDirection::NorthEast) // yes
+		{
+			p1 = sf::Vector2u(gridSize.x - size.x, 0);
+			p2 = sf::Vector2u(gridSize.x, size.y);
+		}
+		else if(resizeDirection == EditorGrid::ResizeDirection::West) // yes
+		{
+			p1 = sf::Vector2u(0, gridSize.y/2 - size.y/2);
+			p2 = sf::Vector2u(size.x, size.y + p1.y);
+		}
+		else if(resizeDirection == EditorGrid::ResizeDirection::Center) // yes
+		{
+			p1 = sf::Vector2u(gridSize.x/2 - size.x/2, gridSize.y/2 - size.y/2);
+			p2 = sf::Vector2u(size.x + p1.x, size.y + p1.y);
+		}
+		else if(resizeDirection == EditorGrid::ResizeDirection::East) // yes
+		{
+			p1 = sf::Vector2u(gridSize.x - size.x, gridSize.y/2 - size.y/2);
+			p2 = sf::Vector2u(gridSize.x + p1.x, size.y + p1.y);
+		}
+		else if(resizeDirection == EditorGrid::ResizeDirection::SouthWest) // yes
+		{
+			p1 = sf::Vector2u(0, gridSize.y - size.y);
+			p2 = sf::Vector2u(size.x, gridSize.y);
+		}
+		else if(resizeDirection == EditorGrid::ResizeDirection::South) // yes
+		{
+			p1 = sf::Vector2u(gridSize.x/2 - size.x/2, gridSize.y - size.y);
+			p2 = sf::Vector2u(size.x + p1.x, gridSize.x);
+		}
+		else if(resizeDirection == EditorGrid::ResizeDirection::SouthEast) // yes
+		{
+			p1 = sf::Vector2u(gridSize.x - size.x, gridSize.y - size.y);
+			p2 = gridSize;
+		}
+		
+		return std::pair<sf::Vector2u, sf::Vector2u>(p1, p2);		
+	}
+
+	sf::Vector2u calculateOffset()
+	{		
+		sf::Vector2u offset = sf::Vector2u(0,0);
+		unsigned int x = abs(originalSize.x - gridSize.x);
+		unsigned int y = abs(originalSize.y - gridSize.y);
+		
+		if	   (resizeDirection == EditorGrid::ResizeDirection::NorthWest) 	offset = sf::Vector2u(0, 0);
+		else if(resizeDirection == EditorGrid::ResizeDirection::North)	 	offset = sf::Vector2u(x/2, 0);
+		else if(resizeDirection == EditorGrid::ResizeDirection::NorthEast) 	offset = sf::Vector2u(x, 0);
+		else if(resizeDirection == EditorGrid::ResizeDirection::West) 		offset = sf::Vector2u(0, y/2);
+		else if(resizeDirection == EditorGrid::ResizeDirection::Center) 	offset = sf::Vector2u(x/2, y/2);
+		else if(resizeDirection == EditorGrid::ResizeDirection::East) 		offset = sf::Vector2u(x, y/2);
+		else if(resizeDirection == EditorGrid::ResizeDirection::SouthWest)	offset = sf::Vector2u(0, y);
+		else if(resizeDirection == EditorGrid::ResizeDirection::South)		offset = sf::Vector2u(x/2, y);
+		else if(resizeDirection == EditorGrid::ResizeDirection::SouthEast)	offset = sf::Vector2u(x, y);
+		
+		return offset;
+	}
 
 	
 	void resetAlignmentOptions()
@@ -43,14 +128,137 @@ private:
 		}
 	}	
 	
-	void initGrid(sf::Vector2u gridSize, sf::Color color = sf::Color::Black)
+
+	bool shrinkToFit()
 	{
-		// clear grid first
-		if(tiles.size())
+		resetAlignmentOptions();
+		resizeDirection = EditorGrid::ResizeDirection::Center;		
+		resizeAlignmentOptions[resizeDirection].isSelected = true;
+		
+		sf::Vector2u p1 = originalSize;
+		sf::Vector2u p2 = sf::Vector2u(0,0);
+		
+		bool hasTile = false;
+		
+		for(Layer & grid : *grids)
 		{
-			tiles.clear();
+			for(int y = 0; y < originalSize.y; y++)
+			{
+				for(int x = 0; x < originalSize.x; x++)
+				{
+					if(grid.tiles[y*originalSize.x + x].getFillColor().a != 0)
+					{
+						p1.x = x < p1.x ? x : p1.x;
+						p1.y = y < p1.y ? y : p1.y;
+						
+						hasTile = true;
+						
+						break;
+					}
+				}
+			}			
 		}
 		
+		for(Layer & grid : *grids)
+		{
+			for(int y = originalSize.y-1; y >= 0; y--)
+			{
+				for(int x = originalSize.x-1; x >= 0; x--)
+				{
+					if(grid.tiles[y*originalSize.x + x].getFillColor().a != 0)
+					{
+						p2.x = x > p2.x ? x : p2.x;
+						p2.y = y > p2.y ? y : p2.y;
+						break;
+					}
+				}
+			}			
+		}
+		
+
+		sf::Vector2u croppedSize = sf::Vector2u(abs(p1.x-p2.x) + hasTile, abs(p1.y-p2.y) + hasTile);		
+		if((p1.x >= p2.x) && (p1.y >= p2.y))
+		{
+			croppedSize = sf::Vector2u(0, 0);
+		}
+
+//		printf("p1: x:%d y:%d  ; p2: x:%d y:%d\n", p1.x, p1.y, p2.x, p2.y);
+//		printf("cropped size: %d %d\n", croppedSize.x, croppedSize.y);
+		
+		inputFieldMapSize_width.text.setString(std::to_string(croppedSize.x));
+		inputFieldMapSize_height.text.setString(std::to_string(croppedSize.y));		
+
+		if(inputIsCorrrect())
+		{
+			if((croppedSize.x == originalSize.x) && (croppedSize.y == originalSize.y)) return true;
+			
+			// clear grid first
+			if(layers.size()) layers.clear();
+
+			unsigned int tile_size = (*grids)[0].tile_size;
+			sf::Vector2f pos = (*grids)[0].tiles[0].getPosition();
+			int margin = 1;
+				
+			sf::Color gridColor = sf::Color::Black;
+			gridColor.a = 200;
+				
+			for(Layer & grid : *grids)
+			{			
+				Layer layer = grid;
+				layer.tiles.clear();
+				layer.gridSize = croppedSize;
+				
+				for(unsigned int y = 0, oy = p1.y; oy < (p1.y+croppedSize.y); y++, oy++)
+				{
+					for(unsigned int x = 0, ox=p1.x; ox < (p1.x+croppedSize.x); x++, ox++)
+					{
+						sf::Vector2f texturePos( x*tile_size, y*tile_size );
+						sf::Vector2f tilePos = sf::Vector2f(pos.x + texturePos.x + margin*x, pos.y + texturePos.y + margin*y);
+						sf::Vector2f tileSize = sf::Vector2f(tile_size, tile_size);
+						unsigned int tileIndex = (y*croppedSize.x) + x;
+
+						Tile tile( tileSize, tilePos, tileIndex );
+						Tile t = grid.tiles[(oy*originalSize.x) + ox];
+						
+						tile.setTexture(t.getTexture());
+						tile.setTextureRect(t.getTextureRect());
+						tile.texturePATH = t.texturePATH;						
+						tile.indexInTexturePack = t.indexInTexturePack;
+						tile.setFillColor(t.getFillColor());
+						
+						tile.hoverBox.setOutlineThickness(1);
+						tile.hoverBox.setOutlineColor(gridColor);
+						tile.hoverColor = sf::Color::Black;
+						
+						layer.tiles.push_back(tile);
+					}
+				}
+				layers.push_back(layer);
+			}
+					
+			// copy over the contents into the actual grids
+			if(grids->size() && layers.size())
+			{
+				grids->clear();
+				for(Layer & layer : layers)	grids->push_back(layer);
+			}
+			
+			gridSize = croppedSize;
+
+			return true;
+		}
+		return false;
+	}
+
+	void initGrid(sf::Vector2u gridSize, bool isPreview = true, sf::Color color = sf::Color::Black)
+	{				
+		// clear grid first
+		if(layers.size())
+		{
+			if((gridSize.x == originalSize.x) && (gridSize.y == originalSize.y)) return;
+			layers.clear();
+		}
+
 		// check if gridSize is sane
 		if(!gridSize.x || !gridSize.y)
 		{
@@ -58,46 +266,130 @@ private:
 			return;
 		}
 		
-		int margin = 1;
+
 		int textMargin = 10;
-		
-		sf::Color gridColor = color;
-		gridColor.a = 200;
-		
+				
 		this->gridSize = gridSize;
 		
 		sf::Vector2f pos = sf::Vector2f(getPosition().x + 300, getPosition().y + 70);
 		
-		unsigned int tile_size_x = (getPosition().x + getSize().x - pos.x - 70)/gridSize.x;
-		unsigned int tile_size_y = (getPosition().y + getSize().y - pos.y - 120)/gridSize.y;
+		float tile_size_x = (getPosition().x + getSize().x - pos.x - 70)/gridSize.x;
+		float tile_size_y = (getPosition().y + getSize().y - pos.y - 120)/gridSize.y;
 
-		unsigned int tile_size = tile_size_x < tile_size_y ? tile_size_x : tile_size_y;
-		
-		for(unsigned int y = 0; y < gridSize.y; y++)
+		tile_size = tile_size_x < tile_size_y ? tile_size_x : tile_size_y;
+		float margin = tile_size/TILE_SIZE;
+		float outlineThickness = 0.2 + margin;
+		outlineThickness = outlineThickness > 1 ? 1 : outlineThickness;
+//		printf("thick: %0.5f\n", outlineThickness);
+
+		sf::Color gridColor = color;
+		gridColor.a = 200;
+
+		if(!isPreview)
 		{
-			for(unsigned int x = 0; x < gridSize.x; x++)
-			{				
-				sf::Vector2f texturePos( x*tile_size, y*tile_size );
+			tile_size = (*grids)[0].tile_size;
+			pos = (*grids)[0].tiles[0].getPosition();
+			outlineThickness = 1;
+			margin = 1;
+		}
 
-				Tile tile(
-					sf::Vector2f(tile_size, tile_size), 
-					sf::Vector2f(pos.x + texturePos.x + margin*x, pos.y + texturePos.y + margin*y),
-					(y*gridSize.x) + x // index
-				);
+		// calculate the area of the original grid within the resized grid
+		std::pair<sf::Vector2u, sf::Vector2u> points = calculatePoints();
+		// calculate the offset of the original grid within the resized grid
+		// (if the new grid is smaller than the original one, the offset makes 
+		//  it so the original grid gets tripped correctly)
+		sf::Vector2u offset = ((originalSize.x > gridSize.x) || originalSize.y > gridSize.y) ? calculateOffset() : sf::Vector2u(0,0);
 
-				sf::Color c = tile.getFillColor();
-				c.a = 0;
-				tile.setFillColor(c);
+		for(Layer & grid : *grids)
+		{
+			Layer layer = grid;
+			layer.tiles.clear();
 
-				tile.hoverBox.setOutlineThickness(1);
-				tile.hoverBox.setOutlineColor(gridColor);
-				tile.hoverColor = sf::Color::Black;
-				tiles.push_back(tile);
+			unsigned int ox = offset.x;
+			unsigned int oy = offset.y;
+			
+			for(unsigned int y = 0; y < gridSize.y; y++)
+			{
+				for(unsigned int x = 0; x < gridSize.x; x++)
+				{
+					sf::Vector2f texturePos( x*tile_size, y*tile_size );
+					sf::Vector2f tilePos = sf::Vector2f(pos.x + texturePos.x + margin*x, pos.y + texturePos.y + margin*y);
+					sf::Vector2f tileSize = sf::Vector2f(tile_size, tile_size);
+					unsigned int tileIndex = (y*gridSize.x) + x;
+
+					Tile tile( tileSize, tilePos, tileIndex );
+
+					if( ((x >= points.first.x) && (y >= points.first.y)) && ((x < points.second.x) && (y < points.second.y)) )
+					{
+						if(isPreview && (ox==offset.x) && (oy==offset.y))
+						{
+							sf::Vector2u p = ( ((originalSize.x > gridSize.x) || originalSize.y > gridSize.y) ? gridSize : originalSize );
+							
+							selectionOverlay.setSize(sf::Vector2f(p.x*tile_size + p.x*margin, p.y*tile_size + p.y*margin));		
+							selectionOverlay.setPosition(tilePos);
+						}
+						
+						
+						Tile t = grid.tiles[(oy*originalSize.x) + ox];
+						
+						tile.setTexture(t.getTexture());
+						tile.setTextureRect(t.getTextureRect());
+						
+						tile.indexInTexturePack = t.indexInTexturePack;
+						tile.texturePATH = t.texturePATH;
+						tile.setFillColor(t.getFillColor());
+						
+						ox++;
+
+						if(ox && (((ox-offset.x) % (originalSize.x > gridSize.x ? gridSize.x : originalSize.x)) == 0))
+						{
+							ox = offset.x;
+							oy += 1;
+						}
+
+					}
+					else
+					{
+						sf::Color c = tile.getFillColor();
+						c.a = 0;
+						tile.setFillColor(c);
+					}
+
+					tile.hoverBox.setOutlineThickness(outlineThickness);
+					tile.hoverBox.setOutlineColor(gridColor);
+					tile.hoverColor = sf::Color::Black;
+					
+					layer.tiles.push_back(tile);
+				}
+			}
+			layers.push_back(layer);
+		}
+		
+		gridOutline.setPosition(sf::Vector2f(
+								layers[0].tiles[0].getPosition().x - gridOutline.getOutlineThickness()/2,
+								layers[0].tiles[0].getPosition().y - gridOutline.getOutlineThickness()/2));
+		gridOutline.setSize(sf::Vector2f(
+			abs(   gridOutline.getPosition().x 
+			     - layers[0].tiles[layers[0].tiles.size()-1].getPosition().x) 
+				 + tile_size + outlineThickness + margin,
+			abs(   gridOutline.getPosition().y 
+				 - layers[0].tiles[layers[0].tiles.size()-1].getPosition().y) 
+				 + tile_size + outlineThickness + margin)
+		);
+
+		// if its not a preview, copy over the contents into the actual grids
+		if(!isPreview && grids->size() && layers.size())
+		{
+			grids->clear();
+			for(Layer & layer : layers)
+			{
+				layer.gridSize = gridSize;
+				layer.currentScale = 1;
+				grids->push_back(layer);
 			}
 		}
 		
-	}	
-	
+	}
 	
 public:
 	InputField inputFieldMapSize_width;
@@ -127,16 +419,37 @@ public:
 		{
 			if(inputIsCorrrect())
 			{
-				initGrid(sf::Vector2u(inputFieldMapSize_width.getUnsignedInteger(), inputFieldMapSize_height.getUnsignedInteger()));//, resizeDirection);
+				initGrid(sf::Vector2u(
+					inputFieldMapSize_width.getUnsignedInteger(), 
+					inputFieldMapSize_height.getUnsignedInteger()),
+					true);//, resizeDirection);
 			}
 		}, sf::Vector2f(0,0)),
 		resizeButton("    Resize    ", [&]()
 		{
 			if(inputIsCorrrect())
-			{			
-				action(inputFieldMapSize_width.getUnsignedInteger(), inputFieldMapSize_height.getUnsignedInteger(), resizeDirection);
+			{
+				initGrid(sf::Vector2u(
+					inputFieldMapSize_width.getUnsignedInteger(), 
+					inputFieldMapSize_height.getUnsignedInteger()),
+					false);//, resizeDirection);				
+				CURRENT_CONTEXT->gridSize = gridSize;
 				close();
 			}
+		}, sf::Vector2f(0,0)),
+		shrinkToFitButton(" Shrink to fit ", [&]()
+		{
+			if(shrinkToFit())
+			{
+				CURRENT_CONTEXT->gridSize = gridSize;
+				close();
+			}
+
+			if(!inputFieldMapSize_width.getUnsignedInteger())
+			{	inputFieldMapSize_width.text.setString(std::to_string(gridSize.x)); }
+			if(!inputFieldMapSize_height.getUnsignedInteger())
+			{	inputFieldMapSize_height.text.setString(std::to_string(gridSize.y));}
+			
 		}, sf::Vector2f(0,0))
 		
 	{
@@ -165,17 +478,17 @@ public:
 		int iy = 0;
 		
 		// options
-		addAlignmentOption("\\", [&](){ resizeDirection = EditorGrid::ResizeDirection::NorthWest; }, ix, iy); ix++;
-		addAlignmentOption("^", [&](){  resizeDirection = EditorGrid::ResizeDirection::North;	  }, ix, iy); ix++;
-		addAlignmentOption("/", [&](){  resizeDirection = EditorGrid::ResizeDirection::NorthEast; }, ix, iy); ix=0; iy++;
+		addAlignmentOption("\\", [&](){ resizeDirection = EditorGrid::ResizeDirection::NorthWest; initGrid(gridSize); }, ix, iy); ix++;
+		addAlignmentOption("^", [&](){  resizeDirection = EditorGrid::ResizeDirection::North;	  initGrid(gridSize); }, ix, iy); ix++;
+		addAlignmentOption("/", [&](){  resizeDirection = EditorGrid::ResizeDirection::NorthEast; initGrid(gridSize); }, ix, iy); ix=0; iy++;
 		//
-		addAlignmentOption("<", [&](){  resizeDirection = EditorGrid::ResizeDirection::West;      }, ix, iy); ix++;
-		addAlignmentOption("#", [&](){  resizeDirection = EditorGrid::ResizeDirection::Center;	  }, ix, iy); ix++;
-		addAlignmentOption(">", [&](){  resizeDirection = EditorGrid::ResizeDirection::East;      }, ix, iy); ix=0; iy++;
+		addAlignmentOption("<", [&](){  resizeDirection = EditorGrid::ResizeDirection::West;      initGrid(gridSize); }, ix, iy); ix++;
+		addAlignmentOption("#", [&](){  resizeDirection = EditorGrid::ResizeDirection::Center;	  initGrid(gridSize); }, ix, iy); ix++;
+		addAlignmentOption(">", [&](){  resizeDirection = EditorGrid::ResizeDirection::East;      initGrid(gridSize); }, ix, iy); ix=0; iy++;
 		//
-		addAlignmentOption("/", [&](){  resizeDirection = EditorGrid::ResizeDirection::SouthWest; }, ix, iy); ix++;
-		addAlignmentOption("v", [&](){  resizeDirection = EditorGrid::ResizeDirection::South;	  }, ix, iy); ix++;
-		addAlignmentOption("\\", [&](){ resizeDirection = EditorGrid::ResizeDirection::SouthEast; }, ix, iy);
+		addAlignmentOption("/", [&](){  resizeDirection = EditorGrid::ResizeDirection::SouthWest; initGrid(gridSize); }, ix, iy); ix++;
+		addAlignmentOption("v", [&](){  resizeDirection = EditorGrid::ResizeDirection::South;	  initGrid(gridSize); }, ix, iy); ix++;
+		addAlignmentOption("\\", [&](){ resizeDirection = EditorGrid::ResizeDirection::SouthEast; initGrid(gridSize); }, ix, iy);
 		//
 		resizeDirection = EditorGrid::ResizeDirection::Center;
 		resizeAlignmentOptions[resizeDirection].isSelected = true;
@@ -196,13 +509,25 @@ public:
 		
 		previewSizeButton.changeSize(sf::Vector2f(previewSizeButton.getSize().x + 20, previewSizeButton.getSize().y + 20));		
 		previewSizeButton.changePosition(sf::Vector2f(
-			inputs[inputs.size()-1]->getPosition().x, 
+			inputPos.x, 
 			inputs[inputs.size()-1]->getPosition().y + 
 			inputs[inputs.size()-1]->getSize().y + 30));
 		previewSizeButton.setOutlineColor(sf::Color::Black);
 		previewSizeButton.setOutlineThickness(2);
 		previewSizeButton.setFillColor(sf::Color::White);
 		previewSizeButton.alignCenter();
+		
+
+
+		shrinkToFitButton.changeSize(sf::Vector2f(shrinkToFitButton.getSize().x + 20, shrinkToFitButton.getSize().y + 20));		
+		shrinkToFitButton.changePosition(sf::Vector2f(
+			inputPos.x, 
+			previewSizeButton.getPosition().y + 
+			previewSizeButton.getSize().y + 30));
+		shrinkToFitButton.setOutlineColor(sf::Color::Black);
+		shrinkToFitButton.setOutlineThickness(2);
+		shrinkToFitButton.setFillColor(sf::Color::White);
+		shrinkToFitButton.alignCenter();
 		
 		// Resize button
 		resizeButton.changeSize(sf::Vector2f(resizeButton.getSize().x, resizeButton.getSize().y + 20));
@@ -213,13 +538,16 @@ public:
 		resizeButton.setOutlineThickness(2);
 		resizeButton.setFillColor(sf::Color::White);
 //		resizeButton.text.setStyle(sf::Text::Bold);
-		resizeButton.alignCenter();
+		resizeButton.alignCenter();	
 		
+		sf::Color outlineColor = sf::Color::Black; outlineColor.a = 100;
+		selectionOverlay.setFillColor(sf::Color::Transparent);
+		selectionOverlay.setOutlineThickness(4);
+		selectionOverlay.setOutlineColor(outlineColor);
 		
-		
-		
-		
-		
+		gridOutline.setFillColor(sf::Color::Transparent);
+		gridOutline.setOutlineColor(sf::Color::Black);
+		gridOutline.setOutlineThickness(1);		
 	}
 
 	bool inputIsCorrrect()
@@ -232,6 +560,10 @@ public:
 				input->setFillColor(input->errorColor);
 				isCorrect = false;
 			}
+			else
+			{
+				input->setFillColor(input->color);
+			}
 		}
 		return isCorrect;
 	}
@@ -241,14 +573,15 @@ public:
 		return isVisible;
 	}
 	
-	void open(sf::Vector2u gridSize, std::function<void(unsigned int, unsigned int, EditorGrid::ResizeDirection)> action)
-	{		
+	void open(std::vector<Layer> * grids)
+	{			
+		this->grids = grids;
+		this->gridSize = (*grids)[0].gridSize;
+		this->originalSize = gridSize;
+
 		inputFieldMapSize_width.text.setString(std::to_string(gridSize.x));
 		inputFieldMapSize_height.text.setString(std::to_string(gridSize.y));
-	
-		this->action = action;
-		this->gridSize = gridSize;		
-			
+		
 		initGrid(gridSize);
 		
 		isVisible = true;
@@ -256,6 +589,7 @@ public:
 	
 	void close()
 	{
+		layers.clear();
 		isVisible = false;
 	}	
 	
@@ -315,6 +649,7 @@ public:
 				}
 				previewSizeButton.update();
 				resizeButton.update();
+				shrinkToFitButton.update();
 			}
 		}
 		catch(...)
@@ -341,18 +676,28 @@ public:
 
 			previewSizeButton.render(window);
 			resizeButton.render(window);
+			shrinkToFitButton.render(window);
 
 			for(InputField * inputField : inputs)
 			{
 				inputField->render(window);
 			}
 			
-			for(Tile & tile : tiles)
+			for(Layer & layer : layers)
 			{
-				tile.render(window);
+				for(Tile & tile : layer.tiles)
+				{
+					if ( (((tile.getPosition().x + tile_size) > selectionOverlay.getPosition().x) && ((tile.getPosition().y + tile_size) > selectionOverlay.getPosition().y)) && 
+						 ((tile.getPosition().x < (selectionOverlay.getPosition().x + selectionOverlay.getSize().x)) && (tile.getPosition().y < (selectionOverlay.getPosition().y + selectionOverlay.getSize().y)))	)
+					{
+						tile.render(window);
+					}
+				}
 			}
 			
-		}		
+			window.draw(selectionOverlay);
+			window.draw(gridOutline);
+		}
 	}
 };
 

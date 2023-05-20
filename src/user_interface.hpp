@@ -283,10 +283,7 @@ private:
 		{
 			if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.selectedLayer)
 			{
-				resizeGridPanel.open(CURRENT_CONTEXT->layerMenu.selectedLayer->gridSize, [&](unsigned int w, unsigned int h, EditorGrid::ResizeDirection d){
-
-					printf("w: %u, h: %u, d: %d\n", w, h, d);
-				});
+				resizeGridPanel.open(&CURRENT_CONTEXT->layerMenu.layers);
 			}
 		});
 	}
@@ -364,10 +361,11 @@ private:
 			{
 				if(CURRENT_CONTEXT)
 				{
+					sf::Vector2f pos = sf::Vector2f(CURRENT_CONTEXT->getPosition().x + 600, 
+													CURRENT_CONTEXT->getPosition().y + 10);					
 					CURRENT_CONTEXT->layerMenu.addLayer(
 						sf::Vector2f(800, 600),
-						sf::Vector2f(CURRENT_CONTEXT->getPosition().x + 600, 
-						CURRENT_CONTEXT->getPosition().y + 10), 
+						pos,
 						"Layer_" + std::to_string(CURRENT_CONTEXT->layerMenu.layers.size()), 
 						CURRENT_CONTEXT->gridSize
 					);

@@ -9,6 +9,7 @@
 class Layer : public EditorGrid
 {
 public:
+	
 	Option option;
 	sf::Line line;
 	
@@ -20,7 +21,7 @@ public:
 		name(name)
 	{
 	
-	}	
+	}
 	
 	Layer(sf::Vector2f size, sf::Vector2f pos, std::string name, sf::Vector2u gridSize, Option option, sf::Color color) : 
 		EditorGrid(size, pos, gridSize, color), 
@@ -44,7 +45,11 @@ public:
 		{
 			for(Tile & tile : tiles)
 			{
-				tile.render(window);
+				if ( (((tile.getPosition().x + TILE_SIZE*currentScale) > getPosition().x) && ((tile.getPosition().y + TILE_SIZE*currentScale) > getPosition().y)) && 
+					 ((tile.getPosition().x < (getPosition().x + getSize().x)) && (tile.getPosition().y < (getPosition().y + getSize().y)))	)
+				{
+					tile.render(window);
+				}
 			}
 		}
 	}
@@ -62,6 +67,8 @@ public:
 	ScrollWheel_vertical scrollWheel;
 	float scrollScale = 1;
 
+	sf::RectangleShape gridOutline = sf::RectangleShape();
+	
 	std::vector<Layer> layers;
 	Layer * selectedLayer = nullptr;
 
@@ -71,7 +78,9 @@ public:
 		setPosition(pos);
 		setFillColor(sf::Color(125, 145, 160));
 		
-//		scrollWheel.isEnabled = false;
+		gridOutline.setFillColor(sf::Color::Transparent);
+		gridOutline.setOutlineColor(sf::Color::Black);
+		gridOutline.setOutlineThickness(1);
 	}
 
 	~LayerMenu()
@@ -164,6 +173,22 @@ public:
 			layer.update();
 		}		
 		
+		if(selectedLayer && selectedLayer->tiles.size())
+		{
+			Tile & firstTile = selectedLayer->tiles[0];
+			Tile & lastTile  = selectedLayer->tiles[selectedLayer->tiles.size()-1];
+
+			// set the gridOutline
+			float tile_size = TILE_SIZE * selectedLayer->currentScale;
+			float outlineThickness = firstTile.getOutlineThickness() * selectedLayer->currentScale;
+			float margin = selectedLayer->margin * selectedLayer->currentScale;
+
+			gridOutline.setPosition(firstTile.getPosition());
+			gridOutline.setSize(sf::Vector2f(
+				abs( gridOutline.getPosition().x - lastTile.getPosition().x ) + tile_size,
+				abs( gridOutline.getPosition().y - lastTile.getPosition().y ) + tile_size));
+		}
+		
 		scrollWheel.update();
 		
 		// if the scroll wheel is selected, make it so the previews follow the cursors y-position
@@ -172,7 +197,13 @@ public:
 	
 	void render(sf::RenderWindow & window)
 	{
-//		window.draw(*this);
+		for(Layer & layer : layers)
+		{
+			layer.renderGrid(window);
+		}
+		window.draw(gridOutline);		
+
+		window.draw(*this);
 		for(Layer & layer : layers)
 		{
 			if(layer.option.getPosition().y >= (scrollWheel.getPosition().y - (layer.option.getSize().y)))
@@ -180,11 +211,7 @@ public:
 				layer.renderOption(window);
 			}
 		}
-		for(Layer & layer : layers)
-		{
-			layer.renderGrid(window);
-		}
-		scrollWheel.render(window);
+		scrollWheel.render(window);		
 	}
 };
 

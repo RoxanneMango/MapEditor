@@ -15,6 +15,9 @@ Context * CURRENT_CONTEXT = NULL;
 class Context : public sf::RectangleShape
 {
 public:
+	int updateDistance = 4;
+	sf::RectangleShape updateDistanceBox;
+
 	ConfirmationPrompt confirmationPrompt;
 
 	ToolBar_textures toolbar_textures;
@@ -23,6 +26,9 @@ public:
 
 	std::string mapName = "";
 	std::string saveFile = "";
+	
+	int hoverIndex = 0;
+	bool isHovered = false;
 	
 	sf::Vector2u gridSize = sf::Vector2u(0,0);
 	
@@ -37,6 +43,13 @@ public:
 		
 		layerMenu.addLayer(sf::Vector2f(800, 600), sf::Vector2f(pos.x + 600, pos.y + 10), "Layer_0", gridSize);
 		layerMenu.selectedLayer = &layerMenu.layers[0];
+		
+		updateDistanceBox.setFillColor(sf::Color::Transparent);
+		updateDistanceBox.setSize(sf::Vector2f(updateDistance * TILE_SIZE, updateDistance * TILE_SIZE));
+		updateDistanceBox.setOutlineThickness(5);
+		updateDistanceBox.setOutlineColor(sf::Color::Red);
+		updateDistanceBox.setOrigin(updateDistanceBox.getSize().x/2, updateDistanceBox.getSize().y/2);
+		
 	}
 	
 	void updateLayerMenu()
@@ -192,40 +205,89 @@ public:
 	
 	void updateEditorGrid()
 	{
-		// Don't update if there is no editor grid to update
-		if(layerMenu.selectedLayer == nullptr) return;
-		
-		// if clicked, deselect tile
-		if(sf::Mouse::isButtonPressed(sf::Mouse::Left))
+		// 1. -- Don't update if there is no editor grid to update
+		// 2. -- if clicked, deselect tile
+		// 3. -- If there are no tiles there is no need to update them
+		if(layerMenu.selectedLayer == nullptr) return;		
+		if(sf::Mouse::isButtonPressed(sf::Mouse::Left)) layerMenu.selectedLayer->selectedTile = NULL;
+		if(!layerMenu.selectedLayer->tiles.size()) return;
+
+		// make sure that no double hovers occur
+		if((hoverIndex < layerMenu.selectedLayer->tiles.size()) && (hoverIndex >= 0))
 		{
-			layerMenu.selectedLayer->selectedTile = NULL;
-		}
-		
-		// Go through all tiles in editor grid, if there are any ...
-		if(layerMenu.selectedLayer->tiles.size())
-		{
-			int indexInGrid = 0;
-			for(Tile & tile : layerMenu.selectedLayer->tiles)
+			Tile & tile = layerMenu.selectedLayer->tiles[hoverIndex];
+			if(&tile != layerMenu.selectedLayer->selectedTile)
 			{
+				tile.hoverBox.setFillColor(sf::Color::Transparent);
+			}
+		}
+
+		// Whenever a zoom in/out action is done, recalculate the size and origin of the updateDistanceBox
+		// so it always updates a constant O(n) number of tiles
+		if(updateDistanceBox.getSize().x != (updateDistance*TILE_SIZE*layerMenu.selectedLayer->currentScale))
+		{
+			// Set size of updateDistanceBox according to the grid tile scaling
+			updateDistanceBox.setSize(sf::Vector2f(updateDistance*TILE_SIZE*layerMenu.selectedLayer->currentScale, 
+												   updateDistance*TILE_SIZE*layerMenu.selectedLayer->currentScale));
+			// clamp size of updateDistanceBox to the size of the editorGrid view;
+			if(updateDistanceBox.getSize().x > layerMenu.selectedLayer->getSize().x)
+			{	updateDistanceBox.setSize(sf::Vector2f(layerMenu.selectedLayer->getSize().x, updateDistanceBox.getSize().y)); }
+			if(updateDistanceBox.getSize().y > layerMenu.selectedLayer->getSize().y)
+			{	updateDistanceBox.setSize(sf::Vector2f(updateDistanceBox.getSize().x, layerMenu.selectedLayer->getSize().y)); }
+			// adjust the origin of the updateDistanceBox after resizing it
+			updateDistanceBox.setOrigin(updateDistanceBox.getSize().x/2, updateDistanceBox.getSize().y/2);
+		}
+
+		// Calculate the update bounding rect (only update tiles within that rect)
+		// 1. -- Set updateDistanceBox position to cursor position
+		// 2. -- Get global bounds rect of updateDistanceBox
+		// 3. -- Get global bounds rect of the first tile in the tile grid of the selected layer
+		// 4. -- Calculate the starting point of the update bounding rect as a relative index in the tiles grid
+		updateDistanceBox.setPosition(CURSOR->getPosition());
+
+		sf::FloatRect distanceRect = updateDistanceBox.getGlobalBounds();
+		sf::FloatRect firstTileRect = layerMenu.selectedLayer->tiles[0].getGlobalBounds();
+		sf::Vector2f div = sf::Vector2f(distanceRect.left - firstTileRect.left,
+										distanceRect.top - firstTileRect.top);
+		
+		// calculate bounding rect to update using the updateDistance
+		sf::Vector2i PA = sf::Vector2i(div.x/(TILE_SIZE * layerMenu.selectedLayer->currentScale), div.y/(TILE_SIZE * layerMenu.selectedLayer->currentScale));				// [A]  O---O  [B]
+		sf::Vector2i PB = sf::Vector2i(PA.x + updateDistance, PA.y);					//	    |	|
+		sf::Vector2i PC = sf::Vector2i(PA.x, PA.y + updateDistance);					//	    |	|
+		sf::Vector2i PD = sf::Vector2i(PA.x + updateDistance, PA.y + updateDistance);	// [C]	O---O  [D]
+		
+		// only proceed to update if the bounding rect falls within the tile grid
+		if( (((PD.x) < 0) || ((PD.y) < 0)) || ( ((PA.x > 0) && ((PA.x) > gridSize.x)) || ((PA.y > 0) && ((PA.y) > gridSize.y))) ) return;
+
+		// Make sure the bounding rect point indexes do not fall outside of acceptable array index values
+		if(PA.x < 0)			PA.x = PC.x = 0;
+		if(PA.y < 0)			PA.y = PB.y = 0;
+		if(PD.x > gridSize.x)	PD.x = PB.x = gridSize.x;
+		if(PD.y > gridSize.y)	PD.y = PC.y = gridSize.y;
+
+		isHovered = false;
+		for(int y = PA.y; y < PD.y; y++)
+		{
+			for(int x = PA.x; x < PD.x; x++)
+			{
+				Tile & tile = layerMenu.selectedLayer->tiles[y*gridSize.x + x];
+
 				// if the cursor is on top of a tile...
 				if(Collision::AABB(*CURSOR, tile) && Collision::AABB(*CURSOR, *layerMenu.selectedLayer) )
 				{
-					// set that tile's hoverbox to hover color
-					tile.hoverBox.setFillColor(sf::Color(tile.hoverColor.r, tile.hoverColor.g, tile.hoverColor.b, tile.transparency));
-
+					isHovered = true;					
+					hoverIndex = y*gridSize.x + x;
+					
 					// handle mouse click depending on the cursor mode and whether
 					// the cursor is on top of a tile or not
 					if(WINDOW->hasFocus() && sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
 					{
 						if(CURSOR->isPressed() && (CURSOR->cursorMode == CursorMode::Default))
-						{
-							layerMenu.selectedLayer->selectedTile = &tile;
-						}
+						{	layerMenu.selectedLayer->selectedTile = &tile;	}
 
 						if((CURSOR->cursorMode == CursorMode::Paint))
 						{
 							TexturePackPreview * preview = toolbar_textures.selectedTexturePreview;
-							
 							if(preview && preview->selectedTile)
 							{
 								tile.setTexture(preview->selectedTile->getTexture());
@@ -257,22 +319,35 @@ public:
 						}
 
 					}
-					
+
+					if(&tile == layerMenu.selectedLayer->selectedTile)
+					{
+						// set that tile's hoverbox to hover color
+						tile.hoverBox.setFillColor(sf::Color(tile.hoverColor.r, tile.hoverColor.g, tile.hoverColor.b, tile.transparency));					
+					}
+					else
+					{
+						// set that tile's hoverbox to hover color
+						tile.hoverBox.setFillColor(sf::Color::Transparent);										
+					}					
 				}
-				else if(&tile == layerMenu.selectedLayer->selectedTile)
-				{
-					// set that tile's hoverbox to hover color
-					tile.hoverBox.setFillColor(sf::Color(tile.hoverColor.r, tile.hoverColor.g, tile.hoverColor.b, tile.transparency));					
-				}
-				else
-				{
-					// set that tile's hoverbox to hover color
-					tile.hoverBox.setFillColor(sf::Color::Transparent);										
-				}
-				indexInGrid++;
-			}
+			}			
 		}
 		
+		// set the hover tile
+		if((hoverIndex < layerMenu.selectedLayer->tiles.size()) && (hoverIndex >= 0))
+		{
+			Tile & tile = layerMenu.selectedLayer->tiles[hoverIndex];
+			if(!isHovered)
+			{
+				tile.hoverBox.setFillColor(sf::Color::Transparent);
+				hoverIndex = -1;
+			}
+			else
+			{
+				tile.hoverBox.setFillColor(sf::Color(tile.hoverColor.r, tile.hoverColor.g, tile.hoverColor.b, tile.transparency));						
+			}
+		}		
 	}
 	
 	
@@ -370,7 +445,8 @@ public:
 //		window.draw(*this);
 
 		layerMenu.render(window);
-		toolbar_textures.render(window);
+//		window.draw(updateDistanceBox); 	// 'quad tree' implementation
+		toolbar_textures.render(window);		
 	}
 };
 

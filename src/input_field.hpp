@@ -77,7 +77,7 @@ public:
 	{
 		if(isValidUnsignedInteger())
 		{
-			printf("It's valid!\n");
+//			printf("It's valid!\n");
 			std::string str = text.getString();
 			unsigned int len = str.length();
 			unsigned int uinteger = 0;
