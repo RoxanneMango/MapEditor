@@ -30,14 +30,227 @@ private:
 	sf::Clock updateClock;
 	float updateTime = 60;
 
-	void createFloatRectMask(sf::RectangleShape & shape)
-	{
-		sf::FloatRect rect = sf::FloatRect(
-			shape.getPosition().x,
-			shape.getPosition().y,
-			shape.getSize().x, 
-			shape.getSize().y);
+	Context * currentContext = CURRENT_CONTEXT;
 
+	bool loadFile(std::string fileName)
+	{
+		printf("fileName: %s\n", fileName.c_str());
+		
+		FILE * fp = fopen(fileName.c_str(), "r");
+		if(fp == NULL) return false;
+
+		std::vector<std::string> lines;
+		
+		char c;		
+		std::string line = "";
+		while(!feof(fp))
+		{
+			if((c = fgetc(fp)))
+			{
+				if(c == '\n')
+				{
+					lines.push_back(line);
+					line.clear();
+				}
+				else
+				{
+					line += c;
+				}
+			}
+		}
+		
+		int index = 0;
+		
+		std::string saveName 				= lines[index++];	// save file name
+		std::string mapName 				= lines[index++];	// map name
+		//
+		unsigned int tileWidth 				= strtoul(&lines[index++][0], NULL, 10);	// width of tiles
+		unsigned int tileHeight				= strtoul(&lines[index++][0], NULL, 10);	// heigth of tiles
+		//
+		unsigned int mapWidth			 	= strtoul(&lines[index++][0], NULL, 10);	// width of the map (in tiles)
+		unsigned int mapHeight 				= strtoul(&lines[index++][0], NULL, 10);	// height of the map (in tiles)
+		//
+		unsigned int numberOfTexturePacks 	= strtoul(&lines[index++][0], NULL, 10);	// number of texture pack PATHs
+		unsigned int numberOfLayers 		= strtoul(&lines[index++][0], NULL, 10);	// number of layers
+		
+		sf::Vector2u gridSize = sf::Vector2u(mapWidth, mapHeight);
+		sf::Vector2u tileSize = sf::Vector2u(tileWidth, tileHeight);
+
+		// create new project
+		Context * cc = new Context(fileName, gridSize, sf::Vector2f(0, toolbar_tab.getPosition().y + toolbar_tab.getSize().y + toolbar_tab.getOutlineThickness()*2));
+		contextList.push_back(cc);
+		currentContext = cc;
+		TOOLBAR_TEXTURES = &currentContext->toolbar_textures;
+
+		TOOLBAR_TEXTURES->texturePreviews.clear();
+
+		toolbar_tab.addOption(mapName, currentContext);
+		toolbar_tab.selectedIndex = toolbar_tab.tabs.size()-1;
+		for(Tab & tab : toolbar_tab.tabs)
+		{
+			tab.deselect();
+		}
+		toolbar_tab.tabs[toolbar_tab.tabs.size()-1].select();
+				
+		// load in the texturepacks
+		index++;
+		for(unsigned int i = index; i < (index+numberOfTexturePacks); i++)
+		{
+			currentContext->toolbar_textures.addTexturePreview(lines[i]);
+//			printf("texture: %s\n", lines[i].c_str());
+		}
+		index += numberOfTexturePacks;
+		
+		// load in the layers
+		for(unsigned int i = 0; i < numberOfLayers; i++)
+		{
+			index++;
+			
+			std::string layerName = lines[index++];			
+
+			currentContext->layerMenu.addLayer(
+				sf::Vector2f(800, 600), 
+				sf::Vector2f(currentContext->getPosition().x + 600, currentContext->getPosition().y + 10), 
+				layerName, gridSize
+			);			
+//			printf("%s\n", layerName.c_str());
+			
+			sf::Color gridColor = sf::Color::Black;
+			Layer & layer = currentContext->layerMenu.layers[currentContext->layerMenu.layers.size()-1];
+			
+			layer.tiles.clear();
+			for(unsigned int y = 0; y < gridSize.y; y++)
+			{
+				unsigned int x = 0;
+				
+				std::string line = lines[index++];
+				line += "\n";
+								
+				std::string coord[2] = {"", ""};
+				bool isTextureCoord = true;
+				bool canMakeTile = false;
+				
+//				printf("\n");
+				
+				for(char & c : line)
+				{								
+					if(c == 'x')
+					{
+						isTextureCoord = true;
+						canMakeTile = true;
+					}
+					else if(c == ';')
+					{
+						isTextureCoord = !isTextureCoord;
+					}
+					else
+					{
+						if(!isTextureCoord && ((c == ' ') || (c == '\n')))
+						{
+							canMakeTile = true;
+						}
+						else
+						{
+							if( (c != ' ') && (c != '\n') )
+							{
+								coord[1-isTextureCoord] += c;
+							}
+						}
+					}
+
+					if(canMakeTile)
+					{
+//						if(isTextureCoord)
+//							printf("x ", coord[0].c_str(), coord[1].c_str());						
+//						else
+//							printf("%s;%s ", coord[0].c_str(), coord[1].c_str());						
+						
+						Tile tile(
+							sf::Vector2f(tileSize.x, tileSize.y),
+							sf::Vector2f(
+								layer.getPosition().x + x*tileSize.x + x*layer.margin, 
+								layer.getPosition().y + y*tileSize.y + y*layer.margin),
+							(y*gridSize.x) + x // index
+						);
+
+						tile.hoverBox.setOutlineColor(gridColor);
+						tile.hoverColor = sf::Color::Black;
+
+						if(isTextureCoord)
+						{
+							sf::Color c = tile.getFillColor();
+							c.a = 0;
+							tile.setFillColor(c);							
+						}
+						else
+						{
+							unsigned int texture_i 	= strtoul(&coord[0][0], NULL, 10);
+							unsigned int tile_i 	= strtoul(&coord[1][0], NULL, 10);
+							
+							// get the texturePack at index (texture_i)
+							TexturePackPreview & preview = currentContext->toolbar_textures.texturePreviews[texture_i];
+							
+							// number of tiles in the texturePack
+							sf::Vector2u packSize = sf::Vector2u(
+								preview.texture->getSize().x / tileSize.x, 
+								preview.texture->getSize().y / tileSize.y
+							);							
+							
+							sf::Vector2u ti = sf::Vector2u((tile_i % gridSize.x), (tile_i / gridSize.x));
+							
+							// set the texture and the texture rect
+							tile.setTexture(preview.texture);
+							tile.setTextureRect(sf::IntRect(
+								ti.x * tileSize.x,
+								ti.y * tileSize.y, 
+								tileSize.x, 
+								tileSize.y)
+							);							
+							
+							tile.indexInTexturePack = tile_i;
+							tile.texturePATH = preview.PATH;
+
+							sf::Color color = tile.getFillColor();
+							color.a = 255;
+							tile.setFillColor(color);
+						}
+
+						layer.tiles.push_back(tile);
+
+						coord[0].clear();
+						coord[1].clear();
+						
+						canMakeTile = false;					
+						isTextureCoord = true;
+						
+						x++;
+					}
+				}
+
+			}
+//			printf("\n");
+		}
+		if(numberOfLayers)
+		{
+			currentContext->layerMenu.selectedLayer = &currentContext->layerMenu.layers[0];
+		}
+		
+		printf("Loaded!\n");
+		
+		return true;
+	}
+	
+	bool saveFile(std::string fileName)
+	{
+		if(currentContext)
+		{
+			return currentContext->save(fileName);
+		}		
+		return false;
+	}	
+
+	void createFloatRectMask(sf::FloatRect & rect)
+	{
 		// borderSize
 		unsigned short bT = 3;//shape.getOutlineThickness();
 		
@@ -57,6 +270,17 @@ private:
 		}
 	}
 
+	void createFloatRectMask(sf::RectangleShape & shape)
+	{
+		sf::FloatRect rect = sf::FloatRect(
+			shape.getPosition().x,
+			shape.getPosition().y,
+			shape.getSize().x, 
+			shape.getSize().y);
+
+		createFloatRectMask(rect);
+	}
+
 	void initUiElements()
 	{
 		// option position
@@ -64,16 +288,14 @@ private:
 		int margin = 20;
 		sf::Color buttonColor = sf::Color(180, 180, 180);
 		
-		if(CURRENT_CONTEXT == nullptr) return;
-		if(CURRENT_CONTEXT->layerMenu.selectedLayer == nullptr) return;
-
-		sf::Vector2f op = sf::Vector2f(CURRENT_CONTEXT->layerMenu.selectedLayer->getPosition().x + CURRENT_CONTEXT->layerMenu.selectedLayer->getSize().x + opoff + margin, CURRENT_CONTEXT->layerMenu.selectedLayer->getPosition().y + opoff);
+		if(currentContext == nullptr) return;
+		sf::Vector2f op = sf::Vector2f(currentContext->layerMenu.layerRect.left + currentContext->layerMenu.layerRect.width + opoff + margin, currentContext->layerMenu.layerRect.top + opoff);
 		
 		uiElements.push_back(moveLeft = Option("<", [&]()
 			{
-				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.layers.size())
+				if(currentContext && currentContext->layerMenu.layers.size())
 				{
-					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					for(Layer & layer : currentContext->layerMenu.layers)
 					{
 						sf::Vector2f pos = layer.tiles[0].getPosition();
 						layer.changePosition(sf::Vector2f(pos.x + layer.tile_size, pos.y));							
@@ -85,9 +307,9 @@ private:
 		//
 		uiElements.push_back(moveRight = Option(">", [&]()
 			{
-				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.layers.size())
+				if(currentContext && currentContext->layerMenu.layers.size())
 				{
-					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					for(Layer & layer : currentContext->layerMenu.layers)
 					{
 						sf::Vector2f pos = layer.tiles[0].getPosition();
 						layer.changePosition(sf::Vector2f(pos.x - layer.tile_size, pos.y));							
@@ -99,9 +321,9 @@ private:
 		//
 		uiElements.push_back(moveUp = Option("^", [&]()
 			{
-				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.layers.size())
+				if(currentContext && currentContext->layerMenu.layers.size())
 				{
-					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					for(Layer & layer : currentContext->layerMenu.layers)
 					{
 						sf::Vector2f pos = layer.tiles[0].getPosition();
 						layer.changePosition(sf::Vector2f(pos.x, pos.y + layer.tile_size));							
@@ -113,9 +335,9 @@ private:
 		//
 		uiElements.push_back(moveDown = Option("v", [&]()
 			{
-				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.layers.size())
+				if(currentContext && currentContext->layerMenu.layers.size())
 				{
-					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					for(Layer & layer : currentContext->layerMenu.layers)
 					{
 						sf::Vector2f pos = layer.tiles[0].getPosition();
 						layer.changePosition(sf::Vector2f(pos.x, pos.y - layer.tile_size));							
@@ -127,9 +349,9 @@ private:
 		//
 		uiElements.push_back(moveReset = Option("r", [&]()
 			{
-				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.layers.size())
+				if(currentContext && currentContext->layerMenu.layers.size())
 				{
-					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					for(Layer & layer : currentContext->layerMenu.layers)
 					{
 						layer.resetGrid();
 					}
@@ -143,9 +365,9 @@ private:
 		
 		uiElements.push_back(zoomIn = Option("+", [&]() 
 			{ 
-				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.layers.size())
+				if(currentContext && currentContext->layerMenu.layers.size())
 				{
-					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					for(Layer & layer : currentContext->layerMenu.layers)
 					{
 						layer.changeScale(0.1);
 					}
@@ -156,9 +378,9 @@ private:
 		//
 		uiElements.push_back(zoomOut = Option("-", [&]()
 			{
-				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.layers.size())
+				if(currentContext && currentContext->layerMenu.layers.size())
 				{
-					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					for(Layer & layer : currentContext->layerMenu.layers)
 					{
 						layer.changeScale(-0.1);
 					}
@@ -170,7 +392,7 @@ private:
 		uiElements.push_back(clickTile = Option("Click", [&]()
 			{
 				CURSOR->setMode(CursorMode::Default);
-//				CURRENT_CONTEXT->layerMenu.selectedLayer->isSelected = true;
+//				currentContext->layerMenu.selectedLayer->isSelected = true;
 			}, 
 			sf::Vector2f(op.x - opoff, op.y + opoff*++y), true, buttonColor )
 		);
@@ -178,11 +400,11 @@ private:
 		uiElements.push_back(paintTile = Option("Paint", [&]()
 			{
 				CURSOR->setMode(CursorMode::Paint);
-				if(CURRENT_CONTEXT && CURRENT_CONTEXT->toolbar_textures.selectedTexturePreview)
+				if(currentContext && currentContext->toolbar_textures.selectedTexturePreview)
 				{
-					CURSOR->setBody(*CURRENT_CONTEXT->toolbar_textures.selectedTexturePreview->selectedTile);
-//					CURRENT_CONTEXT->toolbar_textures.selectedTexturePreview->isSelected = true;
-//					CURRENT_CONTEXT->layerMenu.selectedLayer->isSelected = false;
+					CURSOR->setBody(*currentContext->toolbar_textures.selectedTexturePreview->selectedTile);
+//					currentContext->toolbar_textures.selectedTexturePreview->isSelected = true;
+//					currentContext->layerMenu.selectedLayer->isSelected = false;
 				}
 			}, 
 			sf::Vector2f(op.x - opoff, op.y + opoff*++y), true, buttonColor )
@@ -191,7 +413,7 @@ private:
 		uiElements.push_back(eraseTile = Option("Erase", [&]()
 		{
 			CURSOR->setMode(CursorMode::Delete);
-//			CURRENT_CONTEXT->layerMenu.selectedLayer->isSelected = false;
+//			currentContext->layerMenu.selectedLayer->isSelected = false;
 		}, sf::Vector2f(op.x - opoff, op.y + opoff*++y), true, buttonColor ));
 
 	}
@@ -228,9 +450,21 @@ private:
 		// open saved map item for editor to use
 		toolbar_top.dropdownMenus[ToolBar_top::DropDownMenus::File].addOption("Open...", [&]()
 		{
-			printf("Open!\n");
-			fileExplorer.open();
+			printf("Load!\n");
+			fileExplorer.open([&](std::string PATH)->bool{
+				return loadFile(PATH);
+			});
 		});
+		
+		// open saved map item for editor to use
+		toolbar_top.dropdownMenus[ToolBar_top::DropDownMenus::File].addOption("Open texture...", [&]()
+		{
+			printf("Open!\n");
+			fileExplorer.open([&](std::string PATH)->bool{
+				return TOOLBAR_TEXTURES->addTexturePreview(PATH);
+			});
+		});		
+		
 		
 		toolbar_top.dropdownMenus[ToolBar_top::DropDownMenus::File].addOption("----------------", [](){}, false);
 		
@@ -238,10 +472,7 @@ private:
 		toolbar_top.dropdownMenus[ToolBar_top::DropDownMenus::File].addOption("Save...", [&]()
 		{
 			printf("Save!\n");
-			if(CURRENT_CONTEXT)
-			{
-				CURRENT_CONTEXT->save(savePATH + CURRENT_CONTEXT->mapName + saveFileExtension);
-			}
+			saveFile(savePATH + currentContext->mapName + saveFileExtension);
 		});
 
 		// save map into map save file for map editor to use as ...
@@ -250,7 +481,7 @@ private:
 			printf("Save As!\n");
 			selectedInput = &saveFileExplorer.input;
 			saveFileExplorer.open([&](std::string str){
-				CURRENT_CONTEXT->save(str);
+				currentContext->save(str);
 			});
 		});
 		
@@ -281,9 +512,9 @@ private:
 		
 		toolbar_top.dropdownMenus[ToolBar_top::DropDownMenus::Map].addOption("Resize Map...", [&]()
 		{
-			if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.selectedLayer)
+			if(currentContext && currentContext->layerMenu.selectedLayer)
 			{
-				resizeGridPanel.open(&CURRENT_CONTEXT->layerMenu.layers);
+				resizeGridPanel.open(&currentContext->layerMenu.layers);
 			}
 		});
 	}
@@ -320,7 +551,8 @@ private:
 						return;
 					}
 
-					Context * currentContext = new Context(mapName, gridSize, sf::Vector2f(0, toolbar_tab.getPosition().y + toolbar_tab.getSize().y + toolbar_tab.getOutlineThickness()*2));
+					Context * cc = new Context(mapName, gridSize, sf::Vector2f(0, toolbar_tab.getPosition().y + toolbar_tab.getSize().y + toolbar_tab.getOutlineThickness()*2));
+					currentContext = cc;
 					
 					TOOLBAR_TEXTURES = &currentContext->toolbar_textures;
 					
@@ -332,10 +564,12 @@ private:
 					}
 					toolbar_tab.tabs[toolbar_tab.tabs.size()-1].select();
 					
+					currentContext->layerMenu.addLayer(sf::Vector2f(800, 600), sf::Vector2f(currentContext->getPosition().x + 600, currentContext->getPosition().y + 10), "Layer_0", currentContext->gridSize);
+					currentContext->layerMenu.selectedLayer = &currentContext->layerMenu.layers[0];
+
 					printf("Create new project!...\n");
 					
 					contextList.push_back(currentContext);
-					CURRENT_CONTEXT = currentContext;
 					
 					newProjectPanel.close();
 				}
@@ -349,25 +583,25 @@ private:
 		int opoff = 90;
 		sf::Color buttonColor = sf::Color(180, 180, 180);
 		
-		if(CURRENT_CONTEXT == nullptr) return;
-		if(CURRENT_CONTEXT->layerMenu.selectedLayer == nullptr) return;
+		if(currentContext == nullptr) return;
+//		if(currentContext->layerMenu.selectedLayer == nullptr) return;
 		
-		sf::Vector2f op = sf::Vector2f(CURRENT_CONTEXT->layerMenu.getPosition().x + CURRENT_CONTEXT->layerMenu.getSize().x + CURRENT_CONTEXT->layerMenu.scrollWheel.getSize().x + 20, CURRENT_CONTEXT->layerMenu.getPosition().y);
+		sf::Vector2f op = sf::Vector2f(currentContext->layerMenu.getPosition().x + currentContext->layerMenu.getSize().x + currentContext->layerMenu.scrollWheel.getSize().x + 20, currentContext->layerMenu.getPosition().y);
 
 		int i = 0;
 		int marginY = 35;
 
 		uiElements.push_back(addLayer = Option("+ NEW ", [&]()
 			{
-				if(CURRENT_CONTEXT)
+				if(currentContext)
 				{
-					sf::Vector2f pos = sf::Vector2f(CURRENT_CONTEXT->getPosition().x + 600, 
-													CURRENT_CONTEXT->getPosition().y + 10);					
-					CURRENT_CONTEXT->layerMenu.addLayer(
+					sf::Vector2f pos = sf::Vector2f(currentContext->getPosition().x + 600, 
+													currentContext->getPosition().y + 10);	
+					currentContext->layerMenu.addLayer(
 						sf::Vector2f(800, 600),
 						pos,
-						"Layer_" + std::to_string(CURRENT_CONTEXT->layerMenu.layers.size()), 
-						CURRENT_CONTEXT->gridSize
+						"Layer_" + std::to_string(currentContext->layerMenu.layers.size()), 
+						currentContext->gridSize
 					);
 					moveReset.action();
 				}
@@ -376,29 +610,40 @@ private:
 		);
 		uiElements.push_back(deleteLayer = Option("- DEL ", [&]()
 			{
-				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.selectedLayer)
+				if(currentContext && currentContext->layerMenu.selectedLayer && currentContext->layerMenu.selectedOption)
 				{
 					int i = -1;
-					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					for(Layer & layer : currentContext->layerMenu.layers)
 					{
-						if(&layer == CURRENT_CONTEXT->layerMenu.selectedLayer)
+						if(&layer == currentContext->layerMenu.selectedLayer)
 						{
-							CURRENT_CONTEXT->layerMenu.layers.erase(CURRENT_CONTEXT->layerMenu.layers.begin() + i+1);
-							CURRENT_CONTEXT->layerMenu.alignLayerLabels();
+							currentContext->layerMenu.options.erase(currentContext->layerMenu.options.begin() + i+1);
+							currentContext->layerMenu.layers.erase(currentContext->layerMenu.layers.begin() + i+1);
+							currentContext->layerMenu.alignOptions();
+							
+							i++;
 							break;
 						}
 						i++;
 					}
-					if(i >= 0)
+					
+					if(!currentContext->layerMenu.layers.size())
 					{
-						CURRENT_CONTEXT->layerMenu.selectedLayer = &CURRENT_CONTEXT->layerMenu.layers[i];
-						CURRENT_CONTEXT->layerMenu.selectedLayer->option.isSelected = true;
-						
-						CURRENT_CONTEXT->layerMenu.adjustScrollWheel();
+						currentContext->layerMenu.selectedLayer = NULL;
+						currentContext->layerMenu.selectedOption = NULL;						
 					}
 					else
 					{
-						CURRENT_CONTEXT->layerMenu.selectedLayer = NULL;
+						if( i >= (currentContext->layerMenu.layers.size()-1))
+						{
+							i = (currentContext->layerMenu.layers.size()-1);
+						}
+						
+						currentContext->layerMenu.selectedLayer = &currentContext->layerMenu.layers[i];
+						currentContext->layerMenu.selectedOption = &currentContext->layerMenu.options[i];
+						currentContext->layerMenu.selectedOption->isSelected = true;
+						
+						currentContext->layerMenu.adjustScrollWheel();
 					}
 				}
 			}, 
@@ -406,24 +651,34 @@ private:
 		);
 		uiElements.push_back(moveUpLayer = Option("^ UP  ", [&]()
 			{
-				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.selectedLayer)
+				if(currentContext && currentContext->layerMenu.selectedOption)
 				{
 					int i = 0;
-					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					for(LayerOption & option : currentContext->layerMenu.options)
 					{
-						if(&layer == CURRENT_CONTEXT->layerMenu.selectedLayer)
+						if(&option == currentContext->layerMenu.selectedOption)
 						{
 							if(i > 0)
-							{
-								Layer layer1 = CURRENT_CONTEXT->layerMenu.layers[i];
-								Layer layer2 = CURRENT_CONTEXT->layerMenu.layers[i-1];
-								
-								CURRENT_CONTEXT->layerMenu.layers[i-1] = layer1;
-								CURRENT_CONTEXT->layerMenu.layers[i] = layer2;
-								
-								CURRENT_CONTEXT->layerMenu.selectedLayer = &CURRENT_CONTEXT->layerMenu.layers[i-1];
-								
-								CURRENT_CONTEXT->layerMenu.alignLayerLabels();
+							{												
+								LayerOption option1 = currentContext->layerMenu.options[i];
+								LayerOption option2 = currentContext->layerMenu.options[i-1];
+								//
+								currentContext->layerMenu.options[i-1] = option1;
+								currentContext->layerMenu.options[i] = option2;
+								//
+								currentContext->layerMenu.selectedOption->isSelected = false;								
+								currentContext->layerMenu.selectedOption = &currentContext->layerMenu.options[i-1];
+								currentContext->layerMenu.selectedOption->isSelected = true;
+								//
+								currentContext->layerMenu.alignOptions();
+
+								Layer layer1 = currentContext->layerMenu.layers[i];
+								Layer layer2 = currentContext->layerMenu.layers[i-1];
+								//
+								currentContext->layerMenu.layers[i-1] = layer1;
+								currentContext->layerMenu.layers[i] = layer2;
+								//
+								currentContext->layerMenu.selectedLayer = &currentContext->layerMenu.layers[i-1];
 							}
 							break;
 						}
@@ -435,24 +690,34 @@ private:
 		);
 		uiElements.push_back(moveDownLayer = Option("v DOWN", [&]()
 			{
-				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.selectedLayer)
+				if(currentContext && currentContext->layerMenu.selectedOption)
 				{
 					int i = 0;
-					for(Layer & layer : CURRENT_CONTEXT->layerMenu.layers)
+					for(LayerOption & option : currentContext->layerMenu.options)
 					{
-						if(&layer == CURRENT_CONTEXT->layerMenu.selectedLayer)
+						if(&option == currentContext->layerMenu.selectedOption)
 						{
-							if(i < (CURRENT_CONTEXT->layerMenu.layers.size()-1))
+							if(i < (currentContext->layerMenu.options.size()-1))
 							{
-								Layer layer1 = CURRENT_CONTEXT->layerMenu.layers[i];
-								Layer layer2 = CURRENT_CONTEXT->layerMenu.layers[i+1];
+								LayerOption option1 = currentContext->layerMenu.options[i];
+								LayerOption option2 = currentContext->layerMenu.options[i+1];
+								//
+								currentContext->layerMenu.options[i+1] = option1;
+								currentContext->layerMenu.options[i] = option2;
+								//
+								currentContext->layerMenu.selectedOption->isSelected = false;								
+								currentContext->layerMenu.selectedOption = &currentContext->layerMenu.options[i+1];
+								currentContext->layerMenu.selectedOption->isSelected = true;
+								//
+								currentContext->layerMenu.alignOptions();
 								
-								CURRENT_CONTEXT->layerMenu.layers[i+1] = layer1;
-								CURRENT_CONTEXT->layerMenu.layers[i] = layer2;
-
-								CURRENT_CONTEXT->layerMenu.selectedLayer = &CURRENT_CONTEXT->layerMenu.layers[i+1];
-
-								CURRENT_CONTEXT->layerMenu.alignLayerLabels();								
+								Layer layer1 = currentContext->layerMenu.layers[i];
+								Layer layer2 = currentContext->layerMenu.layers[i+1];
+								//
+								currentContext->layerMenu.layers[i+1] = layer1;
+								currentContext->layerMenu.layers[i] = layer2;
+								//
+								currentContext->layerMenu.selectedLayer = &currentContext->layerMenu.layers[i+1];
 							}
 							break;
 						}
@@ -463,9 +728,9 @@ private:
 			sf::Vector2f(op.x + opoff, op.y + marginY * i), true, buttonColor)
 		);
 
-		if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.selectedLayer)
+		if(currentContext && currentContext->layerMenu.selectedLayer)
 		{
-			CURRENT_CONTEXT->layerMenu.selectedLayer->initGrid(sf::Vector2u(8,8));
+			currentContext->layerMenu.selectedLayer->initGrid(sf::Vector2u(8,8));
 		}
 	}
 
@@ -518,16 +783,16 @@ public:
 	
 		std::string mapName = "Home";
 	
-		CURRENT_CONTEXT = new Context(mapName, sf::Vector2u(8,8), sf::Vector2f(0, toolbar_tab.getPosition().y + toolbar_tab.getSize().y + toolbar_tab.getOutlineThickness()*2));
-		contextList.push_back(CURRENT_CONTEXT);
+		currentContext = new Context(mapName, sf::Vector2u(8,8), sf::Vector2f(0, toolbar_tab.getPosition().y + toolbar_tab.getSize().y + toolbar_tab.getOutlineThickness()*2));
+		contextList.push_back(currentContext);
 		
-		TOOLBAR_TEXTURES = &CURRENT_CONTEXT->toolbar_textures;
+		TOOLBAR_TEXTURES = &currentContext->toolbar_textures;
 		
 		initUiElements();
 		initToolbarTop();
 		initLayerMenu();
 
-		toolbar_tab.addOption(mapName, CURRENT_CONTEXT);
+		toolbar_tab.addOption(mapName, currentContext);
 
 		initNewProjectPanel();
 		initResizeGridPanel();
@@ -538,11 +803,11 @@ public:
 	
 		createFloatRectMask(toolbar_top);
 		createFloatRectMask(toolbar_tab);
-		createFloatRectMask(CURRENT_CONTEXT->toolbar_textures);
-		createFloatRectMask(CURRENT_CONTEXT->toolbar_textures.scrollWheel);
-		createFloatRectMask(*CURRENT_CONTEXT->layerMenu.selectedLayer);
-		createFloatRectMask(CURRENT_CONTEXT->layerMenu);
-		createFloatRectMask(CURRENT_CONTEXT->layerMenu.scrollWheel);
+		createFloatRectMask(currentContext->toolbar_textures);
+		createFloatRectMask(currentContext->toolbar_textures.scrollWheel);
+		createFloatRectMask(currentContext->layerMenu.layerRect);
+		createFloatRectMask(currentContext->layerMenu);
+		createFloatRectMask(currentContext->layerMenu.scrollWheel);
 		
 		for(Option & option : uiElements)
 		{
@@ -585,9 +850,9 @@ public:
 			selectedInput = resizeGridPanel.currentInput;
 			resizeGridPanel.update();
 		}
-		else if((CURRENT_CONTEXT != nullptr) && (CURRENT_CONTEXT->confirmationPrompt.isOpen()))
+		else if((currentContext != nullptr) && (currentContext->confirmationPrompt.isOpen()))
 		{
-			CURRENT_CONTEXT->confirmationPrompt.update();
+			currentContext->confirmationPrompt.update();
 		}
 		else
 		{
@@ -596,7 +861,7 @@ public:
 
 			for(Option & option : uiElements) option.update();
 			
-			if(CURRENT_CONTEXT != nullptr)
+			if(currentContext != nullptr)
 			{
 				// handle user input (only if the window is in focus)
 				//
@@ -611,7 +876,7 @@ public:
 					// Save selected context to .map file in ../saves
 					if(sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) && sf::Keyboard::isKeyPressed(sf::Keyboard::S))
 					{
-						CURRENT_CONTEXT->save(savePATH + CURRENT_CONTEXT->mapName + saveFileExtension);
+						currentContext->save(savePATH + currentContext->mapName + saveFileExtension);
 					}						
 					
 					// Perform actions on the editorGrid layer(s)
@@ -629,11 +894,11 @@ public:
 					}					
 					updateClock.restart();
 				}
-				CURRENT_CONTEXT->update();
+				currentContext->update();
 			}
 		}
 		
-		CURSOR->isBodyVisible = (CURRENT_CONTEXT != nullptr) && ( CURRENT_CONTEXT->layerMenu.selectedLayer && Collision::AABB(*CURSOR, *CURRENT_CONTEXT->layerMenu.selectedLayer) || Collision::AABB(*CURSOR, CURRENT_CONTEXT->toolbar_textures) );			
+		CURSOR->isBodyVisible = (currentContext != nullptr) && ( currentContext->layerMenu.selectedLayer && Collision::AABB(*CURSOR, *currentContext->layerMenu.selectedLayer) || Collision::AABB(*CURSOR, currentContext->toolbar_textures) );			
 		
 	}
 	
@@ -643,10 +908,10 @@ public:
 		
 		objects.push_back((Object*)(&toolbar_top));
 		objects.push_back((Object*)(&toolbar_tab));
-		if(CURRENT_CONTEXT != nullptr)
+		if(currentContext != nullptr)
 		{
-			objects.push_back((Object*)(&CURRENT_CONTEXT->toolbar_textures));
-			objects.push_back((Object*)(CURRENT_CONTEXT->layerMenu.selectedLayer));
+			objects.push_back((Object*)(&currentContext->toolbar_textures));
+			objects.push_back((Object*)(currentContext->layerMenu.selectedLayer));
 		}
 		
 		if(toolbar_top.options.size())
@@ -671,7 +936,7 @@ public:
 	
 	void render(sf::RenderWindow & window)
 	{
-		if(CURRENT_CONTEXT != nullptr) CURRENT_CONTEXT->render(window);
+		if(currentContext != nullptr) currentContext->render(window);
 		
 		for(Option & option : uiElements) option.render(window);
 		
@@ -695,9 +960,9 @@ public:
 		{
 			resizeGridPanel.render(window);
 		}
-		if(CURRENT_CONTEXT && CURRENT_CONTEXT->confirmationPrompt.isOpen())
+		if(currentContext && currentContext->confirmationPrompt.isOpen())
 		{
-			CURRENT_CONTEXT->confirmationPrompt.render(window);
+			currentContext->confirmationPrompt.render(window);
 		}
 	}
 };

@@ -20,7 +20,7 @@ public:
 	sf::Color hoverColor = sf::Color(220, 225, 230);
 
 	sf::Text text;
-	std::function<void()> action;
+	std::function<void()> action = [](){};
 
 	Option()
 	{}
@@ -49,6 +49,27 @@ public:
 		
 	}
 
+	Option(std::string str, sf::Vector2f pos, bool highLightOnHover = true, sf::Color fillColor = sf::Color::Transparent, uint8_t transparency = 128) :
+			text(str, *font, FONT_SIZE), highLightOnHover(highLightOnHover), transparency(transparency)
+	{
+		changePosition(pos);
+
+		setFillColor(fillColor);
+		hoverBox.setFillColor(sf::Color::Transparent);
+		text.setFillColor(sf::Color::Black);
+
+		sf::Vector2f size = sf::Vector2f(text.getGlobalBounds().width + FONT_SIZE*0.5 + (str.size() ? 5 : 0), text.getGlobalBounds().height + FONT_SIZE*0.5);
+		unsigned int minSize = FONT_SIZE*1.2;
+		
+		size.x = size.x < minSize ? minSize : size.x;
+		size.y = size.y < minSize ? minSize : size.y;
+		
+		setSize(size);
+		hoverBox.setSize(size);
+
+		alignCenter();		
+	}
+
 	Option(std::string str, std::function<void()> a, sf::Vector2f pos, sf::Vector2f size, int outlineThickness, bool highLightOnHover = true, sf::Color fillColor = sf::Color::Transparent, uint8_t transparency = 128) : 
 		text(str, *font, FONT_SIZE), action(a), highLightOnHover(highLightOnHover), transparency(transparency)
 	{
@@ -66,7 +87,7 @@ public:
 	}
 
 	
-	void changePosition(sf::Vector2f pos)
+	virtual void changePosition(sf::Vector2f pos)
 	{
 		setPosition(sf::Vector2f(pos.x - 5, pos.y));
 		hoverBox.setPosition(getPosition());
@@ -76,7 +97,7 @@ public:
 //		text.setPosition(pos);
 	}
 	
-	void changeSize(sf::Vector2f size)
+	virtual void changeSize(sf::Vector2f size)
 	{		
 		setSize(size);
 		hoverBox.setSize(size);		

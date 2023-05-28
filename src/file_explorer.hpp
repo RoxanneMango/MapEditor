@@ -197,12 +197,12 @@ protected:
 			{
 				if(dir.size() >= 3)
 				{
-					if(TOOLBAR_TEXTURES->addTexturePreview(std::string(cwd + "/" + dir))) // if this function returns (1)
+					if(callback(std::string(cwd + "/" + dir)))
 					{
 						close();
 					}
 				}
-				printf("file %s\n", dir.c_str());
+//				printf("file %s\n", dir.c_str());
 
 				return true;
 			}
@@ -217,6 +217,9 @@ protected:
 	}
 	
 public:
+
+	std::function<bool(std::string)> callback;
+
 	FileExplorer(sf::Vector2f size, sf::Vector2f pos) : sf::RectangleShape(size)
 	{
 		setPosition(pos);
@@ -258,8 +261,15 @@ public:
 
 	}
 	
-	void open()		{ 	isVisible = true;	 }
-	void close()	{ 	isVisible = false;	 }
+	void open(std::function<bool(std::string)> callback)
+	{
+		this->callback = callback;
+		isVisible = true;
+	}
+	void close()
+	{
+		isVisible = false;
+	}
 	//
 	bool isOpen() 	{ 	return isVisible;	 }
 		

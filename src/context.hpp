@@ -41,8 +41,8 @@ public:
 	{
 		setPosition(pos);
 		
-		layerMenu.addLayer(sf::Vector2f(800, 600), sf::Vector2f(pos.x + 600, pos.y + 10), "Layer_0", gridSize);
-		layerMenu.selectedLayer = &layerMenu.layers[0];
+		layerMenu.selectedLayer = nullptr;
+		layerMenu.layerRect = sf::FloatRect(pos.x + 600, pos.y + 10, 800, 600);
 		
 		updateDistanceBox.setFillColor(sf::Color::Transparent);
 		updateDistanceBox.setSize(sf::Vector2f(updateDistance * TILE_SIZE, updateDistance * TILE_SIZE));
@@ -350,7 +350,6 @@ public:
 		}		
 	}
 	
-	
 	bool save(std::string fileName)
 	{
 //		printf("mapname: %s", mapName.c_str());
@@ -360,36 +359,39 @@ public:
 
 			if(fp == NULL) return false;
 			
-			fprintf(fp, "Map name: %s;\n", mapName.c_str());
-			fprintf(fp, "tile size: [%d,%d];\n", (int)layerMenu.selectedLayer->tile_size, (int)layerMenu.selectedLayer->tile_size);
-			fprintf(fp, "Grid size: [%d,%d]; # (%d total);\n", (int)layerMenu.selectedLayer->gridSize.x, (int)layerMenu.selectedLayer->gridSize.y, (int)layerMenu.selectedLayer->tiles.size());
+			fprintf(fp, "%s\n", mapName.c_str());	// save file name
+			fprintf(fp, "%s\n", mapName.c_str());	// map name
+			fprintf(fp, "%d\n", (int)layerMenu.selectedLayer->tile_size);	// tile width
+			fprintf(fp, "%d\n", (int)layerMenu.selectedLayer->tile_size);	// tile height
+			fprintf(fp, "%d\n", (int)layerMenu.selectedLayer->gridSize.x);	// map width
+			fprintf(fp, "%d\n", (int)layerMenu.selectedLayer->gridSize.y);	// map height
+			fprintf(fp, "%d\n", toolbar_textures.texturePreviews.size());	// number of texture packs
+			fprintf(fp, "%d\n", layerMenu.layers.size());					// number of layers
 
 			fprintf(fp, "\n");
-
-			fprintf(fp, "texture Packs:\n{\n");
 			if(toolbar_textures.texturePreviews.size())
 			{
 				for(int i = 0; i < toolbar_textures.texturePreviews.size(); i++)
 				{
-					fprintf(fp, "\t%d: %s;\n", i, toolbar_textures.texturePreviews[i].PATH.c_str());
+					fprintf(fp, "%s\n", toolbar_textures.texturePreviews[i].PATH.c_str());	// texture pack PATH(s)
 				}
 			}
-			fprintf(fp, "}\n\n");
+			fprintf(fp, "\n");
 
 			if(layerMenu.layers.size())
 			{
 				for(Layer & layer : layerMenu.layers)
 				{
-					fprintf(fp, "%s:\n{\n", layer.name.c_str());
+					fprintf(fp, "%s\n", layer.name.c_str());
 					if(layer.tiles.size())
 					{
 						std::string texturePATH = "";
 						int textureIndex = 0;
 						
-						fprintf(fp, "\t");
+//						fprintf(fp, "\t");
 						
 						for(Tile & tile : layer.tiles)
-						{					
+						{
 							if((!texturePATH.length()) || ((tile.texturePATH.length()) && (tile.texturePATH != texturePATH)))
 							{
 								texturePATH = "";
@@ -398,6 +400,8 @@ public:
 								{
 									if(preview.PATH == tile.texturePATH)
 									{
+//										printf("tp: %s ; tp: %s\n", preview.PATH.c_str(), tile.texturePATH.c_str());
+//										printf("ti: %d\n", textureIndex);
 										texturePATH = preview.PATH;
 										break;
 									}
@@ -407,18 +411,18 @@ public:
 							
 							if(tile.indexInTexturePack >= 0)
 							{
-								fprintf(fp, "[%d;%d]", textureIndex, tile.indexInTexturePack);
+								fprintf(fp, "%d;%d", textureIndex, tile.indexInTexturePack);
 							}
 							else
 							{
-								fprintf(fp, "[ ]");
+								fprintf(fp, "x");
 							}
 							
-							fprintf(fp, ",%s", (tile.index && ((tile.index+1) != (layerMenu.selectedLayer->gridSize.x * layerMenu.selectedLayer->gridSize.y)) && !((tile.index+1) % layerMenu.selectedLayer->gridSize.x) ? "\n\t" : " " ));
+							fprintf(fp, "%s", (tile.index && ((tile.index+1) != (layerMenu.selectedLayer->gridSize.x * layerMenu.selectedLayer->gridSize.y)) && !((tile.index+1) % layerMenu.selectedLayer->gridSize.x) ? "\n" : " " ));
 							
 						}
 					}
-					fprintf(fp, "\n}\n\n");
+					fprintf(fp, "\n\n");
 				}
 			}
 						

@@ -18,6 +18,8 @@ public:
 
 	Tile * selectedTile = NULL;
 
+	unsigned int maxTitleLength = 24;
+
 	sf::Texture * texture = new sf::Texture();
 
 	TexturePackPreview(sf::Vector2f size, sf::Vector2f pos, std::string PATH) : 
@@ -26,6 +28,25 @@ public:
 		title(PATH, *FONT, FONT_SIZE), 
 		PATH(PATH)
 	{
+		
+		for(int j = 0; j < this->PATH.length(); j++)
+		{
+			// replace '\' with '/' to avoid the escape character when loading the PATHs later
+			if(this->PATH[j] == '\\') this->PATH[j] = '/';
+			printf("%c", this->PATH[j]);
+		}
+		printf("\n");
+		if(this->PATH.length() > maxTitleLength)
+		{
+			std::string s = "...";
+			for(unsigned int i = this->PATH.length()-maxTitleLength; i < this->PATH.length(); i++)
+			{
+				s += this->PATH[i];
+			}
+			
+			title.setString(s);
+		}
+				
 		closeButton.setPosition(sf::Vector2f(pos.x+textMargin/2, pos.y+textMargin/2));
 		closeButton.setSize(sf::Vector2f(FONT_SIZE, FONT_SIZE));
 		closeButton.setFillColor(sf::Color::Red);
@@ -62,7 +83,7 @@ public:
 					sf::Vector2f(pos.x + texturePos.x + margin*x, pos.y + texturePos.y + margin*y),
 					x + (y*texturePackTileNum.x), // index
 					x + (y*texturePackTileNum.x), // indexInTexturePack
-					PATH						  // texturePack
+					this->PATH					  // texturePack
 				);
 
 //				tile.index = x + (y*texturePackTileNum.x);

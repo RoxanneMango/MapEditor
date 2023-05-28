@@ -33,6 +33,12 @@ public:
 		wheeliePiece.setOutlineColor(sf::Color::Black);
 	}
 	
+	void disable()
+	{
+		isEnabled = false;
+		wheeliePiece.setSize(sf::Vector2f(wheeliePiece.getSize().x, getSize().y));		
+	}
+	
 	float adjustSize(int sizeY)
 	{
 		unsigned int height = abs(getPosition().y - sizeY);
@@ -51,8 +57,7 @@ public:
 		}
 		else
 		{
-			isEnabled = false;
-			wheeliePiece.setSize(sf::Vector2f(wheeliePiece.getSize().x, getSize().y));
+			disable();
 		}
 		
 		return scrollScale;

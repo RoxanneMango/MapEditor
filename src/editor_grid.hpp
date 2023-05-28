@@ -33,21 +33,11 @@ public:
 
 	bool drawBackPanel = false;
 
-	sf::Color gridColor;
+	sf::Color gridColor = sf::Color::Green;
 
-	EditorGrid(sf::Vector2f size, sf::Vector2f pos, sf::Color gridColor = sf::Color::Black) : gridColor(gridColor)
-	{		
-		setPosition(pos);
-		setSize(size);
-
-//		setFillColor(sf::Color(200,200,200));
-		setFillColor(sf::Color::Transparent);
-		setOutlineThickness(0.5);
-		setOutlineColor(sf::Color::Black);
-
-	}
-
-	EditorGrid(sf::Vector2f size, sf::Vector2f pos, sf::Vector2u gridSize, sf::Color gridColor = sf::Color::Black) : gridColor(gridColor)
+	EditorGrid(sf::Vector2f size, sf::Vector2f pos, sf::Vector2u gridSize, sf::Color gridColor = sf::Color::Black) : 
+		gridSize(gridSize),
+		gridColor(gridColor)
 	{		
 		setPosition(pos);
 		setSize(size);
@@ -60,6 +50,10 @@ public:
 		initGrid(gridSize, gridColor);
 	}
 	
+	void update()
+	{
+		
+	}
 
 	void initGrid(sf::Vector2u gridSize, sf::Color color = sf::Color::Black)
 	{

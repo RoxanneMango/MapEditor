@@ -9,31 +9,13 @@
 class Layer : public EditorGrid
 {
 public:
-	
-	Option option;
-	sf::Line line;
-	
-	std::string name = "";
 	float opacity = 100.00;
-
-	Layer(sf::Vector2f size, sf::Vector2f pos, std::string name) : 
-		EditorGrid(size, pos),
-		name(name)
-	{
+	std::string name = "";
 	
-	}
-	
-	Layer(sf::Vector2f size, sf::Vector2f pos, std::string name, sf::Vector2u gridSize, Option option, sf::Color color) : 
-		EditorGrid(size, pos, gridSize, color), 
-		option(option),
-		line(sf::Vector2f(option.getPosition().x, option.getPosition().y + option.getSize().y), option.getSize().x),
+	Layer(sf::Vector2f size, sf::Vector2f pos, std::string name, sf::Vector2u gridSize, sf::Color color) : 
+		EditorGrid(size, pos, gridSize, color),
 		name(name)
 	{ }
-	
-	void update()
-	{
-		option.update();
-	}
 	
 	void renderGrid(sf::RenderWindow & window)
 	{
@@ -53,12 +35,96 @@ public:
 			}
 		}
 	}
+};
+
+class LayerOption : public Option
+{
+private:
+	bool isCollisionLayer = false;
 	
-	void renderOption(sf::RenderWindow & window)
+	void initToggles()
 	{
-		option.render(window);
+		collisionToggleButton = Option("Colission?", [&]()
+		{
+			printf("Colission %s!\n", (isCollisionLayer ? "On" : "Off"));
+		},
+		sf::Vector2f(getPosition().x + getSize().x/2, getPosition().y), sf::Vector2f(100, 30), 2);
+	}	
+	
+public:	
+	Option collisionToggleButton;
+
+	sf::Line line;
+	
+	LayerOption(std::string name, sf::Vector2f pos) : 
+		Option(name, pos, true, sf::Color(198, 198, 198))
+	{
+		hoverColor = sf::Color(140, 140, 140);
+		line = sf::Line(sf::Vector2f(pos.x, pos.y + getSize().y), getSize().x);
+
+		initToggles();
+	}
+	
+	void changePosition(sf::Vector2f pos) override
+	{
+		setPosition(sf::Vector2f(pos.x - 5, pos.y));
+		hoverBox.setPosition(getPosition());
+
+		int yPos = getSize().y - FONT_SIZE*1.2;		
+		text.setPosition(sf::Vector2f(pos.x + 5, pos.y + (yPos ? yPos/2 : 0) ));
+		
+		line = sf::Line(sf::Vector2f(pos.x, pos.y + getSize().y), getSize().x);
+		initToggles();
+		
+	}
+	
+	void changeSize(sf::Vector2f size) override
+	{		
+		setSize(size);
+		hoverBox.setSize(size);		
+
+		int yPos = getSize().y - FONT_SIZE*1.2;		
+		text.setPosition(sf::Vector2f(getPosition().x + 5, getPosition().y + (yPos ? yPos/2 : 0) ));
+		
+		line = sf::Line(sf::Vector2f(getPosition().x, getPosition().y + size.y), size.x);
+
+		initToggles();
+	}	
+	
+	virtual void update()
+	{
+		if(highLightOnHover && isVisible)
+		{
+			if(Collision::AABB(*CURSOR, *this))
+			{
+				hoverBox.setFillColor(sf::Color(hoverColor.r, hoverColor.g, hoverColor.b, transparency));
+				if(CURSOR->isPressed())
+				{
+					doAction();
+				}
+			}
+			else if(isSelected)
+			{
+				hoverBox.setFillColor(sf::Color(hoverColor.r, hoverColor.g, hoverColor.b, transparency));				
+			}
+			else
+			{
+				hoverBox.setFillColor(sf::Color::Transparent);
+			}
+		}
+	}
+	
+	void render(sf::RenderWindow & window)
+	{
+		window.draw(*this);
+		window.draw(hoverBox);
+		if(text.getString().getSize())
+		{
+			window.draw(text);
+		}
 		window.draw(line);
 	}
+	
 };
 
 class LayerMenu : public sf::RectangleShape
@@ -72,6 +138,11 @@ public:
 	std::vector<Layer> layers;
 	Layer * selectedLayer = nullptr;
 
+	std::vector<LayerOption> options;
+	LayerOption * selectedOption = nullptr;
+
+	sf::FloatRect layerRect;
+
 	LayerMenu(sf::Vector2f size, sf::Vector2f pos) : scrollWheel(sf::Vector2f(20, size.y), sf::Vector2f(pos.x + size.x, pos.y))
 	{
 		setSize(size);
@@ -81,6 +152,8 @@ public:
 		gridOutline.setFillColor(sf::Color::Transparent);
 		gridOutline.setOutlineColor(sf::Color::Black);
 		gridOutline.setOutlineThickness(1);
+		
+		scrollWheel.disable();
 	}
 
 	~LayerMenu()
@@ -88,90 +161,77 @@ public:
 
 	void adjustScrollWheel()
 	{
-		scrollScale = scrollWheel.adjustSize(layers[layers.size()-1].option.getPosition().y + layers[layers.size()-1].option.getSize().y);
-	}
-
-	void alignLayerLabels()
-	{
-		int i = 0;
-		for(Layer & layer : layers)
-		{
-			layer.option.changePosition(sf::Vector2f(getPosition().x, getPosition().y + i*30));
-			layer.line.setPosition(sf::Vector2f(layer.option.getPosition().x, layer.option.getPosition().y + layer.option.getSize().y));
-			i++;
-		}
+		scrollScale = scrollWheel.adjustSize(options[options.size()-1].getPosition().y + options[options.size()-1].getSize().y);
 	}
 
 	void addLayer(sf::Vector2f size, sf::Vector2f pos, std::string name, sf::Vector2u gridSize)
-	{
-		sf::Vector2f oPos = sf::Vector2f(getPosition().x, getPosition().y + layers.size()*30);		
+	{		
+		layers.push_back(Layer(size, pos, name, gridSize, sf::Color::Black));
+		selectedLayer = &layers[layers.size()-1];
 		
-		layers.push_back(Layer(size, pos, name, gridSize, Option(name, [](){}, oPos), sf::Color::Black));
-		Layer & layer = layers[layers.size()-1];
-
 		int uiElementTotalBorderSize = 8;
-		layer.option.changeSize(sf::Vector2f(getSize().x + uiElementTotalBorderSize, layer.option.getSize().y));
-		layer.option.setFillColor(sf::Color(198, 198, 198));
-		layer.option.hoverColor = sf::Color(140, 140, 140);
-
-		layer.line = sf::Line(sf::Vector2f(layer.option.getPosition().x, layer.option.getPosition().y + layer.option.getSize().y), layer.option.getSize().x);		
-	
-		for(Layer & layer : layers)
+		sf::Vector2f oPos(getPosition().x, getPosition().y + options.size()*30);
+		
+		options.push_back(LayerOption(name, oPos));
+		selectedOption = &options[options.size()-1];
+		
+		sf::Vector2f oSize(sf::Vector2f(getSize().x + uiElementTotalBorderSize, selectedOption->getSize().y));		
+		selectedOption->changeSize(oSize);
+		for(LayerOption & option : options)
 		{
-			layer.option.isSelected = false;
+			option.isSelected = false;
 		}
-		layer.option.isSelected = true;
+		selectedOption->isSelected = true;
 
-		selectedLayer = &layer;	
-
-		alignLayers();
+		alignOptions();
 		adjustScrollWheel();
+		
 	}
 	
-	void alignLayers()
+	void alignOptions()
 	{
 		int i = 0;
 		
-		for(Layer & layer : layers)
+		for(LayerOption & option : options)
 		{
 			unsigned int offset = 0;
-			for(unsigned int o = 0; o < i; o++) offset += layer.option.getSize().y + layer.line.thickness;
+			for(unsigned int o = 0; o < i; o++) offset += option.getSize().y + option.line.thickness;
 
-			layer.option.changePosition(sf::Vector2f(getPosition().x, 
+			option.changePosition(sf::Vector2f(getPosition().x, 
 				scrollWheel.getPosition().y + offset - abs(scrollWheel.getPosition().y - scrollWheel.wheeliePiece.getPosition().y)*scrollScale
 			));
-
-			layer.line.setPosition(sf::Vector2f(getPosition().x,
-					scrollWheel.getPosition().y + offset - abs(scrollWheel.getPosition().y - scrollWheel.wheeliePiece.getPosition().y) * scrollScale
-				)
-			);
-
 			i++;
 		}
 
 	}	
 	
 	void update()
-	{		
-		int i = 0;
-		for(Layer & layer : layers)
+	{
+		if(!options.size() || !layers.size()) return;
+		
+		for(int i = 0; i < layers.size(); i++)
 		{
-			if(Collision::AABB(*CURSOR, layer.option))
+			LayerOption & option = options[i];
+			Layer & layer = layers[i];
+			
+			if(Collision::AABB(*CURSOR, option))
 			{
 				if(CURSOR->isPressed())
 				{
-					for(Layer & layer : layers)
+					for(LayerOption & o : options)
 					{
-						layer.option.isSelected = false;
+						o.isSelected = false;
 					}
 					selectedLayer = &layer;
-					selectedLayer->option.isSelected = true;
+					selectedOption = &option;
+					selectedOption->isSelected = true;
 				}
 			}
+			layer.drawBackPanel = (layers.size()-1) == i;
 
-			layer.drawBackPanel = (layers.size()-1) == i++;
+			option.update();
 			layer.update();
-		}		
+		}
 		
 		if(selectedLayer && selectedLayer->tiles.size())
 		{
@@ -192,23 +252,30 @@ public:
 		scrollWheel.update();
 		
 		// if the scroll wheel is selected, make it so the previews follow the cursors y-position
-		if(WINDOW->hasFocus() && scrollWheel.isSelected) alignLayers();
+		if(WINDOW->hasFocus() && scrollWheel.isSelected) alignOptions();
 	}
 	
 	void render(sf::RenderWindow & window)
 	{
-		for(Layer & layer : layers)
+		if(layers.size())
 		{
-			layer.renderGrid(window);
+			for(Layer & layer : layers)
+			{
+				layer.renderGrid(window);
+			}
+			window.draw(gridOutline);
 		}
-		window.draw(gridOutline);		
 
 		window.draw(*this);
-		for(Layer & layer : layers)
+
+		if(options.size())
 		{
-			if(layer.option.getPosition().y >= (scrollWheel.getPosition().y - (layer.option.getSize().y)))
+			for(LayerOption & option : options)
 			{
-				layer.renderOption(window);
+				if(option.getPosition().y >= (scrollWheel.getPosition().y - (option.getSize().y)))
+				{
+					option.render(window);
+				}
 			}
 		}
 		scrollWheel.render(window);		
