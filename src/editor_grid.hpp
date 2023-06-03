@@ -122,7 +122,12 @@ public:
 					Tile & t = tiles[((y*texturePackTileNum.x)+x)];
 
 					t.setPosition(sf::Vector2f((pos.x + texturePos.x + margin*x*s), (pos.y + texturePos.y + margin*y*s)));
-					t.hoverBox.setPosition(sf::Vector2f((pos.x + texturePos.x + margin*x*s), (pos.y + texturePos.y + margin*y*s)));
+					if(t.hasCollision)
+						t.hoverBox.setPosition(sf::Vector2f((pos.x + texturePos.x + margin*x*s + t.hoverBox.getOutlineThickness()*s), (pos.y + texturePos.y + margin*y*s + t.hoverBox.getOutlineThickness()*s)));
+					else
+						t.hoverBox.setPosition(sf::Vector2f((pos.x + texturePos.x + margin*x*s), (pos.y + texturePos.y + margin*y*s)));
+//					t.setPosition(sf::Vector2f((pos.x + texturePos.x + t.hoverBox.getOutlineThickness()*x*s), (pos.y + texturePos.y + t.hoverBox.getOutlineThickness()*y*s)));
+//					t.hoverBox.setPosition(sf::Vector2f((pos.x + texturePos.x + t.hoverBox.getOutlineThickness()*x*s), (pos.y + texturePos.y + t.hoverBox.getOutlineThickness()*y*s)));
 				}
 			}
 		}
@@ -146,6 +151,7 @@ public:
 			{				
 				tile.setScale(newScale, newScale);
 				tile.hoverBox.setScale(newScale, newScale);
+				tile.scale = newScale;
 			}
 
 			Tile & t = tiles[0];

@@ -10,13 +10,14 @@
 
 class ToolBar_textures : public Object
 {
-	sf::Vector2f margin = sf::Vector2f(8, 8);
 	sf::Vector2f textureSize;
 	float texturesHeight = margin.y;
 	
 	float scrollScale = 1;
 	
 public:
+	sf::Vector2f margin = sf::Vector2f(8, 8);
+	
 	TexturePackPreview * selectedTexturePreview;
 	std::vector<TexturePackPreview> texturePreviews;
 
@@ -34,9 +35,10 @@ public:
 		setOutlineColor(sf::Color::Black);
 		
 		textureSize = sf::Vector2f(size.x - margin.x, size.x - margin.y);
-		addTexturePreview("../assets/texturepack.png");
-		addTexturePreview("../assets/texturepack_grass.png");
-//		addTexturePreview("../assets/pumpkin.png");
+//		addTexturePreview("C:\\Users\\Roxanne\\Desktop\\Programming\\MapEditor\\assets/texturepack.png");
+//		addTexturePreview(R"(C:\Users\Roxanne\Desktop\Programming\MapEditor\assets/texturepack.png)");		
+//		addTexturePreview("C:/Users/Roxanne/Desktop/Programming/MapEditor/assets/texturepack.png");		
+//		addTexturePreview("C:/Users/Roxanne/Desktop/Programming/MapEditor/assets/texturepack.png");		
 		
 	}
 	
@@ -112,6 +114,6 @@ public:
 	}
 };
 
-ToolBar_textures * TOOLBAR_TEXTURES;
+ToolBar_textures * TOOLBAR_TEXTURES = nullptr;
 
 #endif // TOOLBAR_TEXTURES_HPP

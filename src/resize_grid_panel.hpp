@@ -251,7 +251,7 @@ private:
 	}
 
 	void initGrid(sf::Vector2u gridSize, bool isPreview = true, sf::Color color = sf::Color::Black)
-	{				
+	{
 		// clear grid first
 		if(layers.size())
 		{
@@ -427,12 +427,14 @@ public:
 		}, sf::Vector2f(0,0)),
 		resizeButton("    Resize    ", [&]()
 		{
+//			printf("gridSize: %d %d\n", CURRENT_CONTEXT->gridSize.x, CURRENT_CONTEXT->gridSize.y);
+			
 			if(inputIsCorrrect())
 			{
 				initGrid(sf::Vector2u(
 					inputFieldMapSize_width.getUnsignedInteger(), 
 					inputFieldMapSize_height.getUnsignedInteger()),
-					false);//, resizeDirection);				
+					false);//, resizeDirection);
 				CURRENT_CONTEXT->gridSize = gridSize;
 				close();
 			}

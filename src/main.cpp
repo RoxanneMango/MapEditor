@@ -20,7 +20,8 @@ main(int argc, char ** argv)
 	initResources();
 	
 	WINDOW = new sf::RenderWindow;
-	WINDOW->create(sf::VideoMode(screenWidth, screenHeight), WINDOW_TITLE, sf::Style::Default);
+//	WINDOW->create(sf::VideoMode(screenWidth, screenHeight), WINDOW_TITLE, sf::Style::Default);
+	WINDOW->create(sf::VideoMode(screenWidth, screenHeight), WINDOW_TITLE, sf::Style::Titlebar | sf::Style::Close);
 	WINDOW->setFramerateLimit(FRAME_RATE_LIMIT);
 	WINDOW->setVerticalSyncEnabled(false);
 	WINDOW->setActive(true);

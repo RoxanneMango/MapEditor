@@ -12,6 +12,8 @@ public:
 	float opacity = 100.00;
 	std::string name = "";
 	
+	bool isVisible = true;
+	
 	Layer(sf::Vector2f size, sf::Vector2f pos, std::string name, sf::Vector2u gridSize, sf::Color color) : 
 		EditorGrid(size, pos, gridSize, color),
 		name(name)
@@ -19,20 +21,147 @@ public:
 	
 	void renderGrid(sf::RenderWindow & window)
 	{
-		if(drawBackPanel)
+		if(isVisible)
 		{
-			window.draw(*this);
-		}
-		if(tiles.size())
-		{
-			for(Tile & tile : tiles)
+			
+			if(drawBackPanel)
 			{
-				if ( (((tile.getPosition().x + TILE_SIZE*currentScale) > getPosition().x) && ((tile.getPosition().y + TILE_SIZE*currentScale) > getPosition().y)) && 
-					 ((tile.getPosition().x < (getPosition().x + getSize().x)) && (tile.getPosition().y < (getPosition().y + getSize().y)))	)
+				window.draw(*this);
+			}
+			if(tiles.size())
+			{
+				for(Tile & tile : tiles)
 				{
-					tile.render(window);
+					if ( (((tile.getPosition().x + TILE_SIZE*currentScale) > getPosition().x) && ((tile.getPosition().y + TILE_SIZE*currentScale) > getPosition().y)) && 
+						 ((tile.getPosition().x < (getPosition().x + getSize().x)) && (tile.getPosition().y < (getPosition().y + getSize().y)))	)
+					{
+						tile.render(window);
+					}
 				}
 			}
+		}
+	}
+};
+
+class Cross
+{
+private:
+	sf::Line line1;
+	sf::Line line2;
+		
+public:
+	Cross(sf::Vector2f pos, sf::Vector2f size, int thickness) : line1(pos, size.x, thickness), line2(pos, size.x, thickness)
+	{
+		line1.setOrigin(sf::Vector2f(line1.getSize().x/2, line1.getSize().y/2));
+		line2.setOrigin(sf::Vector2f(line2.getSize().x/2, line2.getSize().y/2));
+		
+		line1.setRotation(45);
+		line2.setRotation(315);
+	}
+	
+	void setPosition(sf::Vector2f pos)
+	{		
+		line1.setPosition(pos);
+		line2.setPosition(pos);
+	}
+	
+	void render(sf::RenderWindow & window)
+	{
+		line1.render(window);
+		line2.render(window);
+	}
+};
+
+class ToggleOption : public Option
+{
+public:
+	bool isToggled = true;
+	
+	int toggleBoxMargin = 10;
+	sf::RectangleShape toggleBox;
+
+	sf::Color unCheckedColor  = sf::Color(200, 200, 200);
+	sf::Color hoverColor = sf::Color(180, 180, 180);
+	sf::Color checkedColor = sf::Color(150, 150, 150);
+
+	Cross cross;
+
+	ToggleOption(sf::Vector2f pos, std::string label = "") : 
+		Option(label, pos, false, sf::Color::Transparent),
+		toggleBox(sf::Vector2f(15, 15)),
+		cross(pos, toggleBox.getSize(), 2)
+	{		
+		text.setCharacterSize(FONT_SIZE*0.8);
+		changePosition(pos);
+
+		toggleBox.setPosition(sf::Vector2f(pos.x + getSize().x - toggleBox.getSize().x - toggleBoxMargin, pos.y));
+		toggleBox.setOutlineThickness(2);
+		toggleBox.setOutlineColor(sf::Color::Black);
+		toggleBox.setFillColor(checkedColor);		
+	}
+
+	void changePosition(sf::Vector2f pos) override
+	{
+		setPosition(pos);
+		toggleBox.setPosition(sf::Vector2f(
+			pos.x + getSize().x - toggleBox.getSize().x, 
+			pos.y + (getSize().y - (toggleBox.getSize().y - toggleBox.getOutlineThickness()))/2));
+		text.setPosition(sf::Vector2f(
+			pos.x + getSize().x - toggleBox.getSize().x - text.getGlobalBounds().width - toggleBoxMargin,
+			pos.y + (getSize().y - text.getCharacterSize())/2));
+			
+		cross.setPosition(sf::Vector2f(
+			toggleBox.getPosition().x + toggleBox.getSize().x/2.0,
+			toggleBox.getPosition().y + toggleBox.getSize().y/2.0
+			));
+	}
+	
+	void update() override
+	{
+		if(isVisible)
+		{
+			if(Collision::AABB(*CURSOR, toggleBox))
+			{
+				if(!isToggled)
+				{
+					toggleBox.setFillColor(hoverColor);
+				}
+				if(CURSOR->isPressed())
+				{
+					isToggled = isToggled ? false : true;
+					if(isToggled)
+					{
+						toggleBox.setFillColor(checkedColor);
+					}
+					else
+					{
+						toggleBox.setFillColor(unCheckedColor);
+					}
+				}
+			}
+			else
+			{
+				if(!isToggled)
+				{
+					toggleBox.setFillColor(unCheckedColor);
+				}				
+			}
+		}
+	}
+	
+	void render(sf::RenderWindow & window)
+	{
+		window.draw(*this);
+		window.draw(hoverBox);
+		if(text.getString().getSize())
+		{
+			window.draw(text);
+		}
+		window.draw(toggleBox);
+		
+		if(isToggled)
+		{
+			cross.render(window);
 		}
 	}
 };
@@ -41,28 +170,18 @@ class LayerOption : public Option
 {
 private:
 	bool isCollisionLayer = false;
-	
-	void initToggles()
-	{
-		collisionToggleButton = Option("Colission?", [&]()
-		{
-			printf("Colission %s!\n", (isCollisionLayer ? "On" : "Off"));
-		},
-		sf::Vector2f(getPosition().x + getSize().x/2, getPosition().y), sf::Vector2f(100, 30), 2);
-	}	
-	
+
 public:	
-	Option collisionToggleButton;
+	ToggleOption visibilityToggleButton;
 
 	sf::Line line;
 	
 	LayerOption(std::string name, sf::Vector2f pos) : 
-		Option(name, pos, true, sf::Color(198, 198, 198))
+		Option(name, pos, true, sf::Color(198, 198, 198)),
+		visibilityToggleButton(pos, "Visible")
 	{
 		hoverColor = sf::Color(140, 140, 140);
 		line = sf::Line(sf::Vector2f(pos.x, pos.y + getSize().y), getSize().x);
-
-		initToggles();
 	}
 	
 	void changePosition(sf::Vector2f pos) override
@@ -73,9 +192,9 @@ public:
 		int yPos = getSize().y - FONT_SIZE*1.2;		
 		text.setPosition(sf::Vector2f(pos.x + 5, pos.y + (yPos ? yPos/2 : 0) ));
 		
-		line = sf::Line(sf::Vector2f(pos.x, pos.y + getSize().y), getSize().x);
-		initToggles();
+		visibilityToggleButton.changePosition(sf::Vector2f(pos.x + getSize().x - visibilityToggleButton.getSize().x - 30, pos.y));
 		
+		line = sf::Line(sf::Vector2f(pos.x, pos.y + getSize().y), getSize().x);		
 	}
 	
 	void changeSize(sf::Vector2f size) override
@@ -86,9 +205,9 @@ public:
 		int yPos = getSize().y - FONT_SIZE*1.2;		
 		text.setPosition(sf::Vector2f(getPosition().x + 5, getPosition().y + (yPos ? yPos/2 : 0) ));
 		
+		visibilityToggleButton.changePosition(sf::Vector2f(getPosition().x + getSize().x - visibilityToggleButton.getSize().x, visibilityToggleButton.getPosition().y));		
+			
 		line = sf::Line(sf::Vector2f(getPosition().x, getPosition().y + size.y), size.x);
-
-		initToggles();
 	}	
 	
 	virtual void update()
@@ -98,7 +217,7 @@ public:
 			if(Collision::AABB(*CURSOR, *this))
 			{
 				hoverBox.setFillColor(sf::Color(hoverColor.r, hoverColor.g, hoverColor.b, transparency));
-				if(CURSOR->isPressed())
+				if(CURSOR->isClicked)
 				{
 					doAction();
 				}
@@ -112,6 +231,7 @@ public:
 				hoverBox.setFillColor(sf::Color::Transparent);
 			}
 		}
+		visibilityToggleButton.update();
 	}
 	
 	void render(sf::RenderWindow & window)
@@ -123,6 +243,7 @@ public:
 			window.draw(text);
 		}
 		window.draw(line);
+		visibilityToggleButton.render(window);
 	}
 	
 };
@@ -214,9 +335,11 @@ public:
 			LayerOption & option = options[i];
 			Layer & layer = layers[i];
 			
+			layer.isVisible = option.visibilityToggleButton.isToggled;
+			
 			if(Collision::AABB(*CURSOR, option))
 			{
-				if(CURSOR->isPressed())
+				if(CURSOR->isClicked)
 				{
 					for(LayerOption & o : options)
 					{

@@ -14,7 +14,9 @@ enum CursorMode
 	Paint,
 	Select,
 	Delete,
-	Text
+	Text,
+	Collision,
+	NoCollision
 };
 
 class Cursor : public sf::RectangleShape
@@ -95,6 +97,16 @@ public:
 				fp::SetCursor(sf::Cursor::Text);
 				break;
 			}
+			case CursorMode::Collision:
+			{
+				fp::SetCursor(sf::Cursor::SizeAll);
+				break;
+			}
+			case CursorMode::NoCollision:
+			{
+				fp::SetCursor(sf::Cursor::NotAllowed);
+				break;
+			}			
 			default:
 			{
 				fp::SetCursor(sf::Cursor::Arrow);

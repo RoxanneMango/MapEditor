@@ -251,10 +251,11 @@ public:
 										distanceRect.top - firstTileRect.top);
 		
 		// calculate bounding rect to update using the updateDistance
-		sf::Vector2i PA = sf::Vector2i(div.x/(TILE_SIZE * layerMenu.selectedLayer->currentScale), div.y/(TILE_SIZE * layerMenu.selectedLayer->currentScale));				// [A]  O---O  [B]
-		sf::Vector2i PB = sf::Vector2i(PA.x + updateDistance, PA.y);					//	    |	|
-		sf::Vector2i PC = sf::Vector2i(PA.x, PA.y + updateDistance);					//	    |	|
-		sf::Vector2i PD = sf::Vector2i(PA.x + updateDistance, PA.y + updateDistance);	// [C]	O---O  [D]
+		sf::Vector2i PA = sf::Vector2i(div.x/(TILE_SIZE * layerMenu.selectedLayer->currentScale), 	// [A]  O---O  [B]
+									   div.y/(TILE_SIZE * layerMenu.selectedLayer->currentScale));	//		|	|
+		sf::Vector2i PB = sf::Vector2i(PA.x + updateDistance, PA.y);								//	    |	|
+		sf::Vector2i PC = sf::Vector2i(PA.x, PA.y + updateDistance);								//	    |	|
+		sf::Vector2i PD = sf::Vector2i(PA.x + updateDistance, PA.y + updateDistance);				// [C]	O---O  [D]
 		
 		// only proceed to update if the bounding rect falls within the tile grid
 		if( (((PD.x) < 0) || ((PD.y) < 0)) || ( ((PA.x > 0) && ((PA.x) > gridSize.x)) || ((PA.y > 0) && ((PA.y) > gridSize.y))) ) return;
@@ -304,8 +305,8 @@ public:
 						}
 						else if(CURSOR->cursorMode == CursorMode::Delete)
 						{
-							if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
-							{
+//							if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
+//							{
 								tile.texturePATH = "";
 								tile.indexInTexturePack = -1;
 								
@@ -315,7 +316,15 @@ public:
 								sf::Color color = tile.getFillColor();
 								color.a = 0;
 								tile.setFillColor(color);
-							}							
+//							}							
+						}
+						else if(CURSOR->cursorMode == CursorMode::Collision)
+						{
+							tile.setCollision(true);
+						}
+						else if(CURSOR->cursorMode == CursorMode::NoCollision)
+						{
+							tile.setCollision(false);
 						}
 
 					}
@@ -411,11 +420,11 @@ public:
 							
 							if(tile.indexInTexturePack >= 0)
 							{
-								fprintf(fp, "%d;%d", textureIndex, tile.indexInTexturePack);
+								fprintf(fp, "%d;%d;%d", textureIndex, tile.indexInTexturePack, tile.hasCollision);
 							}
 							else
 							{
-								fprintf(fp, "x");
+								fprintf(fp, "x;%d", tile.hasCollision);
 							}
 							
 							fprintf(fp, "%s", (tile.index && ((tile.index+1) != (layerMenu.selectedLayer->gridSize.x * layerMenu.selectedLayer->gridSize.y)) && !((tile.index+1) % layerMenu.selectedLayer->gridSize.x) ? "\n" : " " ));
