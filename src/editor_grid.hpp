@@ -28,7 +28,9 @@ public:
 	sf::Texture * texture = new sf::Texture();
 	sf::Vector2u gridSize = sf::Vector2u(8, 8);
 
-	Tile * selectedTile = NULL;
+//	Tile * selectedTile = NULL;
+	TileObject * selectedTileObject = NULL;
+	std::vector<TileObject> tileObjects;
 	std::vector<Tile> tiles;
 
 	bool drawBackPanel = false;

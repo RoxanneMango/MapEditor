@@ -39,6 +39,17 @@ public:
 					}
 				}
 			}
+			if(tileObjects.size())
+			{
+				for(TileObject & tile : tileObjects)
+				{
+					if ( (((tile.getPosition().x + TILE_SIZE*currentScale) > getPosition().x) && ((tile.getPosition().y + TILE_SIZE*currentScale) > getPosition().y)) && 
+						 ((tile.getPosition().x < (getPosition().x + getSize().x)) && (tile.getPosition().y < (getPosition().y + getSize().y)))	)
+					{
+						tile.render(window);
+					}
+				}
+			}			
 		}
 	}
 };
@@ -173,12 +184,14 @@ private:
 
 public:	
 	ToggleOption visibilityToggleButton;
+	ToggleOption freeMovementToggleButton;
 
 	sf::Line line;
 	
 	LayerOption(std::string name, sf::Vector2f pos) : 
 		Option(name, pos, true, sf::Color(198, 198, 198)),
-		visibilityToggleButton(pos, "Visible")
+		visibilityToggleButton(pos, "Visible"),
+		freeMovementToggleButton(pos, "snap")
 	{
 		hoverColor = sf::Color(140, 140, 140);
 		line = sf::Line(sf::Vector2f(pos.x, pos.y + getSize().y), getSize().x);
@@ -193,6 +206,7 @@ public:
 		text.setPosition(sf::Vector2f(pos.x + 5, pos.y + (yPos ? yPos/2 : 0) ));
 		
 		visibilityToggleButton.changePosition(sf::Vector2f(pos.x + getSize().x - visibilityToggleButton.getSize().x - 30, pos.y));
+		freeMovementToggleButton.changePosition(sf::Vector2f(visibilityToggleButton.getPosition().x - freeMovementToggleButton.getSize().x - 10, pos.y));
 		
 		line = sf::Line(sf::Vector2f(pos.x, pos.y + getSize().y), getSize().x);		
 	}
@@ -202,10 +216,11 @@ public:
 		setSize(size);
 		hoverBox.setSize(size);		
 
-		int yPos = getSize().y - FONT_SIZE*1.2;		
+		int yPos = getSize().y - FONT_SIZE*1.2;
 		text.setPosition(sf::Vector2f(getPosition().x + 5, getPosition().y + (yPos ? yPos/2 : 0) ));
 		
 		visibilityToggleButton.changePosition(sf::Vector2f(getPosition().x + getSize().x - visibilityToggleButton.getSize().x, visibilityToggleButton.getPosition().y));		
+		freeMovementToggleButton.changePosition(sf::Vector2f(visibilityToggleButton.getPosition().x - freeMovementToggleButton.getSize().x - 10, visibilityToggleButton.getPosition().y));			
 			
 		line = sf::Line(sf::Vector2f(getPosition().x, getPosition().y + size.y), size.x);
 	}	
@@ -232,6 +247,7 @@ public:
 			}
 		}
 		visibilityToggleButton.update();
+		freeMovementToggleButton.update();
 	}
 	
 	void render(sf::RenderWindow & window)
@@ -244,6 +260,7 @@ public:
 		}
 		window.draw(line);
 		visibilityToggleButton.render(window);
+		freeMovementToggleButton.render(window);
 	}
 	
 };
@@ -258,6 +275,7 @@ public:
 	
 	std::vector<Layer> layers;
 	Layer * selectedLayer = nullptr;
+	Tile * selectedTile = nullptr;
 
 	std::vector<LayerOption> options;
 	LayerOption * selectedOption = nullptr;

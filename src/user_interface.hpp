@@ -429,6 +429,16 @@ private:
 			}, 
 			sf::Vector2f(op.x - opoff, op.y + opoff*++y), true, buttonColor )
 		);
+		uiElements.push_back(paintTile = Option("Object", [&]()
+			{
+				CURSOR->setMode(CursorMode::AddTileObject);
+				if(CURRENT_CONTEXT && CURRENT_CONTEXT->toolbar_textures.selectedTexturePreview)
+				{
+					CURSOR->setBody(*CURRENT_CONTEXT->toolbar_textures.selectedTexturePreview->selectedTile);
+				}
+			}, 
+			sf::Vector2f(op.x - opoff, op.y + opoff*++y), true, buttonColor )
+		);		
 		
 		uiElements.push_back(colissionTile = Option("Collide", [&]()
 			{
@@ -757,8 +767,21 @@ private:
 					}
 				}
 			}, 
-			sf::Vector2f(op.x + opoff, op.y + marginY * i), true, buttonColor)
+			sf::Vector2f(op.x + opoff, op.y + marginY * i++), true, buttonColor)
 		);
+		uiElements.push_back(moveDownLayer = Option("RENAME", [&]()
+			{
+				if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.selectedOption)
+				{
+					selectedInput = &CURRENT_CONTEXT->textPrompt.input;
+					CURRENT_CONTEXT->textPrompt.open("What should the layer\nbe called?", [&](std::string str)
+					{
+						CURRENT_CONTEXT->layerMenu.selectedOption->text.setString(str);
+					});
+				}
+			}, 
+			sf::Vector2f(op.x, op.y + marginY * i), true, buttonColor)
+		);		
 
 		if(CURRENT_CONTEXT && CURRENT_CONTEXT->layerMenu.selectedLayer)
 		{
@@ -887,6 +910,10 @@ public:
 		{
 			CURRENT_CONTEXT->confirmationPrompt.update();
 		}
+		else if((CURRENT_CONTEXT != nullptr) && (CURRENT_CONTEXT->textPrompt.isOpen()))
+		{
+			CURRENT_CONTEXT->textPrompt.update();
+		}
 		else
 		{
 			toolbar_top.update();
@@ -997,6 +1024,10 @@ public:
 		{
 			CURRENT_CONTEXT->confirmationPrompt.render(window);
 		}
+		if(CURRENT_CONTEXT && CURRENT_CONTEXT->textPrompt.isOpen())
+		{
+			CURRENT_CONTEXT->textPrompt.render(window);
+		}		
 	}
 };
 

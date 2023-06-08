@@ -16,15 +16,16 @@ enum CursorMode
 	Delete,
 	Text,
 	Collision,
-	NoCollision
+	NoCollision,
+	AddTileObject
 };
 
 class Cursor : public sf::RectangleShape
 {
-	sf::RectangleShape body;
 	float transparency = 0.66;
 	float scale = 0.8;
 public:
+	sf::RectangleShape body;
 
 	CursorMode cursorMode = CursorMode::Default;
 	bool isBodyVisible = true;
@@ -65,6 +66,7 @@ public:
 	void setMode(CursorMode mode)
 	{
 		cursorMode = mode;
+		body.setScale(scale, scale);
 		switch(mode)
 		{
 			case CursorMode::Default:
@@ -76,6 +78,7 @@ public:
 			case CursorMode::Select:
 			{
 				fp::SetCursor(sf::Cursor::Cross);
+				resetBody();				
 				break;
 			}
 			case CursorMode::Paint:
@@ -83,6 +86,12 @@ public:
 				fp::SetCursor(sf::Cursor::Arrow);
 //				setBody(SELECTED_TEXTURE_PACK->tiles[Tile::selectedIndex]);
 //				SELECTED_TEXTURE_PACK->isSelected = true;
+				break;
+			}
+			case CursorMode::AddTileObject:
+			{
+				body.setScale(1, 1);
+				fp::SetCursor(sf::Cursor::Arrow);
 				break;
 			}
 			case CursorMode::Delete:
@@ -95,21 +104,25 @@ public:
 			case CursorMode::Text:
 			{
 				fp::SetCursor(sf::Cursor::Text);
+				resetBody();
 				break;
 			}
 			case CursorMode::Collision:
 			{
 				fp::SetCursor(sf::Cursor::SizeAll);
+				resetBody();				
 				break;
 			}
 			case CursorMode::NoCollision:
 			{
 				fp::SetCursor(sf::Cursor::NotAllowed);
+				resetBody();				
 				break;
 			}			
 			default:
 			{
 				fp::SetCursor(sf::Cursor::Arrow);
+				resetBody();
 				break;
 			}
 		}

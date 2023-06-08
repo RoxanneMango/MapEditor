@@ -35,7 +35,7 @@ public:
 		setOutlineColor(sf::Color::Black);
 		
 		textureSize = sf::Vector2f(size.x - margin.x, size.x - margin.y);
-//		addTexturePreview("C:\\Users\\Roxanne\\Desktop\\Programming\\MapEditor\\assets/texturepack.png");
+		addTexturePreview("C:\\Users\\Roxanne\\Desktop\\Programming\\MapEditor\\assets/texturepack.png");
 //		addTexturePreview(R"(C:\Users\Roxanne\Desktop\Programming\MapEditor\assets/texturepack.png)");		
 //		addTexturePreview("C:/Users/Roxanne/Desktop/Programming/MapEditor/assets/texturepack.png");		
 //		addTexturePreview("C:/Users/Roxanne/Desktop/Programming/MapEditor/assets/texturepack.png");		

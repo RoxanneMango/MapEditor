@@ -87,4 +87,27 @@ public:
 	
 };
 
+class TileObject : public Tile
+{
+public:
+	sf::Vector2i mapPosition;
+
+	TileObject(sf::Vector2f size, sf::Vector2f pos, int index, int indexInTexturePack = -1, std::string texturePATH = "") : 
+		Tile(size, pos, index, indexInTexturePack, texturePATH)
+	{
+		this->hoverColor = sf::Color::Black;
+	}
+	
+	void setMapPosition(sf::Vector2f pos)
+	{
+		mapPosition = sf::Vector2i((int)pos.x, (int)pos.y);
+	}
+	
+	sf::Vector2i getMapPosition()
+	{
+		return mapPosition;
+	}
+	
+};
+
 #endif // TILE_HPP

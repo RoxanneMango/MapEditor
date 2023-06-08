@@ -19,6 +19,7 @@ public:
 	sf::RectangleShape updateDistanceBox;
 
 	ConfirmationPrompt confirmationPrompt;
+	TextPrompt textPrompt;
 
 	ToolBar_textures toolbar_textures;
 
@@ -29,8 +30,12 @@ public:
 	
 	int hoverIndex = 0;
 	bool isHovered = false;
+	bool isSelected = false;
 	
 	sf::Vector2u gridSize = sf::Vector2u(0,0);
+	
+	sf::Clock tileObjectPlaceTimer;
+	float tileObjectPlaceTimeout_ms = 250;
 	
 	Context(std::string name, sf::Vector2u gridSize, sf::Vector2f pos) : 
 		sf::RectangleShape(sf::Vector2f(sf::VideoMode::getDesktopMode().width * WINDOW_SIZE_MULTIPLIER, (sf::VideoMode::getDesktopMode().height * WINDOW_SIZE_MULTIPLIER)-pos.y)),
@@ -179,7 +184,10 @@ public:
 								toolbar_textures.selectedTexturePreview = &preview;		// set this preview to be the selected preview
 								preview.selectedTile = &tile;			// set this tile to be the selected tile
 								
-								CURSOR->setMode(CursorMode::Paint);		// set cursor to painting mode
+								if(CURSOR->cursorMode != CursorMode::AddTileObject)
+								{
+									CURSOR->setMode(CursorMode::Paint);		// set cursor to painting mode									
+								}
 								CURSOR->setBody(tile);					// set cursor body to this tile texture
 							}
 						}	// if the tile is selected
@@ -208,17 +216,24 @@ public:
 		// 1. -- Don't update if there is no editor grid to update
 		// 2. -- if clicked, deselect tile
 		// 3. -- If there are no tiles there is no need to update them
-		if(layerMenu.selectedLayer == nullptr) return;		
-		if(sf::Mouse::isButtonPressed(sf::Mouse::Left)) layerMenu.selectedLayer->selectedTile = NULL;
+		if(layerMenu.selectedLayer == nullptr) return;
 		if(!layerMenu.selectedLayer->tiles.size()) return;
 
 		// make sure that no double hovers occur
 		if((hoverIndex < layerMenu.selectedLayer->tiles.size()) && (hoverIndex >= 0))
 		{
 			Tile & tile = layerMenu.selectedLayer->tiles[hoverIndex];
-			if(&tile != layerMenu.selectedLayer->selectedTile)
+			if(&tile != layerMenu.selectedTile)
 			{
 				tile.hoverBox.setFillColor(sf::Color::Transparent);
+			}
+		}
+		if(sf::Mouse::isButtonPressed(sf::Mouse::Left))
+		{
+			if(layerMenu.selectedTile)
+			{
+				layerMenu.selectedTile->hoverBox.setFillColor(sf::Color::Transparent);
+				layerMenu.selectedTile = NULL;
 			}
 		}
 
@@ -258,7 +273,10 @@ public:
 		sf::Vector2i PD = sf::Vector2i(PA.x + updateDistance, PA.y + updateDistance);				// [C]	O---O  [D]
 		
 		// only proceed to update if the bounding rect falls within the tile grid
-		if( (((PD.x) < 0) || ((PD.y) < 0)) || ( ((PA.x > 0) && ((PA.x) > gridSize.x)) || ((PA.y > 0) && ((PA.y) > gridSize.y))) ) return;
+		if( (((PD.x) < 0) || ((PD.y) < 0)) || ( ((PA.x > 0) && ((PA.x) > gridSize.x)) || ((PA.y > 0) && ((PA.y) > gridSize.y))) )
+		{
+			return;
+		}
 
 		// Make sure the bounding rect point indexes do not fall outside of acceptable array index values
 		if(PA.x < 0)			PA.x = PC.x = 0;
@@ -276,15 +294,40 @@ public:
 				// if the cursor is on top of a tile...
 				if(Collision::AABB(*CURSOR, tile) && Collision::AABB(*CURSOR, *layerMenu.selectedLayer) )
 				{
-					isHovered = true;					
-					hoverIndex = y*gridSize.x + x;
+					isHovered = true;
+					int hoverObjectIndex = -1;
+					if(layerMenu.selectedLayer->tileObjects.size())
+					{
+						for(int i = 0; i < layerMenu.selectedLayer->tileObjects.size(); i++)
+						{
+							TileObject & object = layerMenu.selectedLayer->tileObjects[i];
+							if(Collision::AABB(*CURSOR, object))
+							{
+								hoverObjectIndex = i;
+								object.hoverBox.setFillColor(sf::Color(object.hoverColor.r, object.hoverColor.g, object.hoverColor.b, object.transparency));					
+							}
+							else
+							{
+								object.hoverBox.setFillColor(sf::Color::Transparent);												
+							}							
+						}
+					}
+					hoverIndex = (hoverObjectIndex >= 0) ? -1 : y*gridSize.x + x;
 					
 					// handle mouse click depending on the cursor mode and whether
 					// the cursor is on top of a tile or not
 					if(WINDOW->hasFocus() && sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
 					{
-						if(CURSOR->isPressed() && (CURSOR->cursorMode == CursorMode::Default))
-						{	layerMenu.selectedLayer->selectedTile = &tile;	}
+//						if(CURSOR->isPressed() && (CURSOR->cursorMode == CursorMode::Default))
+						if((CURSOR->cursorMode == CursorMode::Default))
+						{
+//							if(layerMenu.selectedTile && layerMenu.selectedTile != &tile)
+//							{
+//								layerMenu.selectedTile->hoverBox.setFillColor(sf::Color::Transparent);							
+//							}
+							tile.hoverBox.setFillColor(sf::Color(tile.hoverColor.r, tile.hoverColor.g, tile.hoverColor.b, tile.transparency));
+							layerMenu.selectedTile = &tile;
+						}
 
 						if((CURSOR->cursorMode == CursorMode::Paint))
 						{
@@ -303,10 +346,60 @@ public:
 
 							}
 						}
-						else if(CURSOR->cursorMode == CursorMode::Delete)
+						else if((CURSOR->cursorMode == CursorMode::AddTileObject) && (tileObjectPlaceTimer.getElapsedTime().asMilliseconds() >= tileObjectPlaceTimeout_ms))
 						{
-//							if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
-//							{
+							TexturePackPreview * preview = toolbar_textures.selectedTexturePreview;
+							Layer * layer = layerMenu.selectedLayer;
+							if(preview && preview->selectedTile)
+							{
+								sf::Vector2f tileObjectPos = tile.getPosition();
+								if(layerMenu.selectedOption && !layerMenu.selectedOption->freeMovementToggleButton.isToggled)
+								{								
+									tileObjectPos = sf::Vector2f(
+										CURSOR->getPosition().x - CURSOR->body.getSize().x/2,
+										CURSOR->getPosition().y - CURSOR->body.getSize().y/2);
+								}
+								
+								TileObject object(tile.getSize(), 
+									tileObjectPos, 
+									tile.index, 
+									preview->selectedTile->indexInTexturePack, 
+									preview->selectedTile->texturePATH);								
+								
+								bool isValidPos = true;
+								for(TileObject & obj : layer->tileObjects)
+								{
+									if(Collision::AABB(obj, object))
+									{
+										isValidPos = false;
+									}
+								}
+
+								if(isValidPos)
+								{
+									object.setTexture(preview->selectedTile->getTexture());
+									object.setTextureRect(preview->selectedTile->getTextureRect());
+									
+									sf::Vector2f relativeTileObjectPos = sf::Vector2f(
+										abs(layer->getPosition().x - tileObjectPos.x), 
+										abs(layer->getPosition().y - tileObjectPos.y));
+									object.setMapPosition(relativeTileObjectPos);
+									
+									layer->tileObjects.push_back(object);
+									
+									tileObjectPlaceTimer.restart();
+								}
+								
+							}								
+						}
+						else if(CURSOR->cursorMode == CursorMode::Delete && CURSOR->isPressed())
+						{
+							if(hoverObjectIndex >= 0)
+							{
+								layerMenu.selectedLayer->tileObjects.erase(layerMenu.selectedLayer->tileObjects.begin() + hoverObjectIndex);
+							}
+							else
+							{
 								tile.texturePATH = "";
 								tile.indexInTexturePack = -1;
 								
@@ -316,7 +409,7 @@ public:
 								sf::Color color = tile.getFillColor();
 								color.a = 0;
 								tile.setFillColor(color);
-//							}							
+							}
 						}
 						else if(CURSOR->cursorMode == CursorMode::Collision)
 						{
@@ -328,17 +421,6 @@ public:
 						}
 
 					}
-
-					if(&tile == layerMenu.selectedLayer->selectedTile)
-					{
-						// set that tile's hoverbox to hover color
-						tile.hoverBox.setFillColor(sf::Color(tile.hoverColor.r, tile.hoverColor.g, tile.hoverColor.b, tile.transparency));					
-					}
-					else
-					{
-						// set that tile's hoverbox to hover color
-						tile.hoverBox.setFillColor(sf::Color::Transparent);										
-					}					
 				}
 			}			
 		}
@@ -347,16 +429,17 @@ public:
 		if((hoverIndex < layerMenu.selectedLayer->tiles.size()) && (hoverIndex >= 0))
 		{
 			Tile & tile = layerMenu.selectedLayer->tiles[hoverIndex];
-			if(!isHovered)
+			if(!isHovered && (layerMenu.selectedTile != &tile))
 			{
 				tile.hoverBox.setFillColor(sf::Color::Transparent);
 				hoverIndex = -1;
 			}
 			else
-			{
+			{				
 				tile.hoverBox.setFillColor(sf::Color(tile.hoverColor.r, tile.hoverColor.g, tile.hoverColor.b, tile.transparency));						
 			}
-		}		
+		}
+		
 	}
 	
 	bool save(std::string fileName)
